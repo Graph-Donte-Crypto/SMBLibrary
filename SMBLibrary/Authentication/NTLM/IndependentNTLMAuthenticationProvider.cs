@@ -44,9 +44,9 @@ namespace SMBLibrary.Authentication.NTLM
         // \\servername\sharename\dir1\dir2\dir3\dir4      - 81 login attempts
         // \\servername\sharename\dir1\dir2\dir3\dir4\dir5 - 57 login attempts
         private static readonly int DefaultMaxLoginAttemptsInWindow = 100;
-        private static readonly TimeSpan DefaultLoginWindowDuration = new TimeSpan(0, 20, 0);
-        private GetUserPassword m_GetUserPassword;
-        private LoginCounter m_loginCounter;
+        private static readonly TimeSpan DefaultLoginWindowDuration = new(0, 20, 0);
+        private readonly GetUserPassword m_GetUserPassword;
+        private readonly LoginCounter m_loginCounter;
 
         /// <param name="getUserPassword">
         /// The NTLM challenge response will be compared against the provided password.
@@ -78,12 +78,14 @@ namespace SMBLibrary.Authentication.NTLM
             byte[] serverChallenge = GenerateServerChallenge();
             context = new AuthContext(serverChallenge);
 
-            ChallengeMessage challengeMessage = new ChallengeMessage();
-            // https://msdn.microsoft.com/en-us/library/cc236691.aspx
-            challengeMessage.NegotiateFlags = NegotiateFlags.TargetTypeServer |
+            ChallengeMessage challengeMessage = new()
+            {
+                // https://msdn.microsoft.com/en-us/library/cc236691.aspx
+                NegotiateFlags = NegotiateFlags.TargetTypeServer |
                                               NegotiateFlags.TargetInfo |
                                               NegotiateFlags.TargetNameSupplied |
-                                              NegotiateFlags.Version;
+                                              NegotiateFlags.Version
+            };
             // [MS-NLMP] NTLMSSP_NEGOTIATE_NTLM MUST be set in the [..] CHALLENGE_MESSAGE to the client.
             challengeMessage.NegotiateFlags |= NegotiateFlags.NTLMSessionSecurity;
 
@@ -162,9 +164,8 @@ namespace SMBLibrary.Authentication.NTLM
             {
                 return NTStatus.SEC_E_INVALID_TOKEN;
             }
-            
-            AuthContext authContext = context as AuthContext;
-            if (authContext == null)
+
+            if (context is not AuthContext authContext)
             {
                 // There are two possible reasons for authContext to be null:
                 // 1. We have a bug in our implementation, let's assume that's not the case,
@@ -300,8 +301,7 @@ namespace SMBLibrary.Authentication.NTLM
 
         public override object GetContextAttribute(object context, GSSAttributeName attributeName)
         {
-            AuthContext authContext = context as AuthContext;
-            if (authContext != null)
+            if (context is AuthContext authContext)
             {
                 switch (attributeName)
                 {
@@ -360,7 +360,7 @@ namespace SMBLibrary.Authentication.NTLM
         /// <summary>
         /// LM v2 / NTLM v2
         /// </summary>
-        private bool AuthenticateV2(string domainName, string accountName, string password, byte[] serverChallenge, byte[] lmResponse, byte[] ntResponse)
+        private static bool AuthenticateV2(string domainName, string accountName, string password, byte[] serverChallenge, byte[] lmResponse, byte[] ntResponse)
         {
             // Note: Linux CIFS VFS 3.10 will send LmChallengeResponse with length of 0 bytes
             if (lmResponse.Length == 24)

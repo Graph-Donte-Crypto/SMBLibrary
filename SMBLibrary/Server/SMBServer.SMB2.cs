@@ -17,7 +17,7 @@ namespace SMBLibrary.Server
     {
         private void ProcessSMB2RequestChain(List<SMB2Command> requestChain, ref ConnectionState state)
         {
-            List<SMB2Command> responseChain = new List<SMB2Command>();
+            List<SMB2Command> responseChain = [];
             FileID? fileID = null;
             NTStatus? fileIDStatus = null;
             foreach (SMB2Command request in requestChain)
@@ -80,10 +80,9 @@ namespace SMBLibrary.Server
         {
             if (state.Dialect == SMBDialect.NotSet)
             {
-                if (command is NegotiateRequest)
+                if (command is NegotiateRequest request)
                 {
-                    NegotiateRequest request = (NegotiateRequest)command;
-                    SMB2Command response = NegotiateHelper.GetNegotiateResponse(request, m_securityProvider, state, m_transport, m_serverGuid, m_serverStartTime, m_enableSMB3);
+                    SMB2Command response = NegotiateHelper.GetNegotiateResponse(request, SecurityProvider, state, m_transport, m_serverGuid, m_serverStartTime, m_enableSMB3);
                     if (state.Dialect != SMBDialect.NotSet)
                     {
                         state = new SMB2ConnectionState(state);
@@ -117,9 +116,9 @@ namespace SMBLibrary.Server
 
         private SMB2Command ProcessSMB2Command(SMB2Command command, SMB2ConnectionState state)
         {
-            if (command is SessionSetupRequest)
+            if (command is SessionSetupRequest sessionSetupRequest)
             {
-                return SessionSetupHelper.GetSessionSetupResponse((SessionSetupRequest)command, m_securityProvider, state);
+                return SessionSetupHelper.GetSessionSetupResponse(sessionSetupRequest, SecurityProvider, state);
             }
             else if (command is EchoRequest)
             {
@@ -133,23 +132,23 @@ namespace SMBLibrary.Server
                     return new ErrorResponse(command.CommandName, NTStatus.STATUS_USER_SESSION_DELETED);
                 }
 
-                if (command is TreeConnectRequest)
+                if (command is TreeConnectRequest treeConnectRequest)
                 {
-                    return TreeConnectHelper.GetTreeConnectResponse((TreeConnectRequest)command, state, m_services, m_shares);
+                    return TreeConnectHelper.GetTreeConnectResponse(treeConnectRequest, state, m_services, Shares);
                 }
                 else if (command is LogoffRequest)
                 {
                     state.LogToServer(Severity.Information, "Logoff: User '{0}' logged off. (SessionID: {1})", session.UserName, command.Header.SessionID);
-                    m_securityProvider.DeleteSecurityContext(ref session.SecurityContext.AuthenticationContext);
+                    SecurityProvider.DeleteSecurityContext(ref session.SecurityContext.AuthenticationContext);
                     state.RemoveSession(command.Header.SessionID);
                     return new LogoffResponse();
                 }
                 else if (command.Header.IsAsync)
                 {
                     // TreeID will not be present in an ASYNC header
-                    if (command is CancelRequest)
+                    if (command is CancelRequest cancelRequest)
                     {
-                        return CancelHelper.GetCancelResponse((CancelRequest)command, state);
+                        return CancelHelper.GetCancelResponse(cancelRequest, state);
                     }
                 }
                 else
@@ -161,57 +160,34 @@ namespace SMBLibrary.Server
                         return new ErrorResponse(command.CommandName, NTStatus.STATUS_NETWORK_NAME_DELETED);
                     }
 
-                    if (command is TreeDisconnectRequest)
+                    switch (command)
                     {
-                        return TreeConnectHelper.GetTreeDisconnectResponse((TreeDisconnectRequest)command, share, state);
-                    }
-                    else if (command is CreateRequest)
-                    {
-                        return CreateHelper.GetCreateResponse((CreateRequest)command, share, state);
-                    }
-                    else if (command is QueryInfoRequest)
-                    {
-                        return QueryInfoHelper.GetQueryInfoResponse((QueryInfoRequest)command, share, state);
-                    }
-                    else if (command is SetInfoRequest)
-                    {
-                        return SetInfoHelper.GetSetInfoResponse((SetInfoRequest)command, share, state);
-                    }
-                    else if (command is QueryDirectoryRequest)
-                    {
-                        return QueryDirectoryHelper.GetQueryDirectoryResponse((QueryDirectoryRequest)command, share, state);
-                    }
-                    else if (command is ReadRequest)
-                    {
-                        return ReadWriteResponseHelper.GetReadResponse((ReadRequest)command, share, state);
-                    }
-                    else if (command is WriteRequest)
-                    {
-                        return ReadWriteResponseHelper.GetWriteResponse((WriteRequest)command, share, state);
-                    }
-                    else if (command is LockRequest)
-                    {
-                        return LockHelper.GetLockResponse((LockRequest)command, share, state);
-                    }
-                    else if (command is FlushRequest)
-                    {
-                        return ReadWriteResponseHelper.GetFlushResponse((FlushRequest)command, share, state);
-                    }
-                    else if (command is CloseRequest)
-                    {
-                        return CloseHelper.GetCloseResponse((CloseRequest)command, share, state);
-                    }
-                    else if (command is IOCtlRequest)
-                    {
-                        return IOCtlHelper.GetIOCtlResponse((IOCtlRequest)command, share, state);
-                    }
-                    else if (command is CancelRequest)
-                    {
-                        return CancelHelper.GetCancelResponse((CancelRequest)command, state);
-                    }
-                    else if (command is ChangeNotifyRequest)
-                    {
-                        return ChangeNotifyHelper.GetChangeNotifyInterimResponse((ChangeNotifyRequest)command, share, state);
+                        case TreeDisconnectRequest treeDisconnectRequest:
+                            return TreeConnectHelper.GetTreeDisconnectResponse(treeDisconnectRequest, share, state);
+                        case CreateRequest createRequest:
+                            return CreateHelper.GetCreateResponse(createRequest, share, state);
+                        case QueryInfoRequest queryInfoRequest:
+                            return QueryInfoHelper.GetQueryInfoResponse(queryInfoRequest, share, state);
+                        case SetInfoRequest setInfoRequest:
+                            return SetInfoHelper.GetSetInfoResponse(setInfoRequest, share, state);
+                        case QueryDirectoryRequest queryDirectoryRequest:
+                            return QueryDirectoryHelper.GetQueryDirectoryResponse(queryDirectoryRequest, share, state);
+                        case ReadRequest readRequest:
+                            return ReadWriteResponseHelper.GetReadResponse(readRequest, share, state);
+                        case WriteRequest writeRequest:
+                            return ReadWriteResponseHelper.GetWriteResponse(writeRequest, share, state);
+                        case LockRequest lockRequest:
+                            return LockHelper.GetLockResponse(lockRequest, share, state);
+                        case FlushRequest flushRequest:
+                            return ReadWriteResponseHelper.GetFlushResponse(flushRequest, share, state);
+                        case CloseRequest closeRequest:
+                            return CloseHelper.GetCloseResponse(closeRequest, share, state);
+                        case IOCtlRequest iOCtlRequest:
+                            return IOCtlHelper.GetIOCtlResponse(iOCtlRequest, share, state);
+                        case CancelRequest cancelRequest:
+                            return CancelHelper.GetCancelResponse(cancelRequest, state);
+                        case ChangeNotifyRequest changeNotifyRequest:
+                            return ChangeNotifyHelper.GetChangeNotifyInterimResponse(changeNotifyRequest, share, state);
                     }
                 }
             }
@@ -221,15 +197,14 @@ namespace SMBLibrary.Server
 
         internal static void EnqueueResponse(ConnectionState state, SMB2Command response)
         {
-            List<SMB2Command> responseChain = new List<SMB2Command>();
-            responseChain.Add(response);
+            List<SMB2Command> responseChain = [response];
             EnqueueResponseChain(state, responseChain);
         }
 
         private static void EnqueueResponseChain(ConnectionState state, List<SMB2Command> responseChain)
         {
             byte[] signingKey = null;
-            if (state is SMB2ConnectionState)
+            if (state is SMB2ConnectionState sMB2ConnectionState)
             {
                 // Note: multiple sessions MAY be multiplexed on the same connection, so theoretically
                 // we could have compounding unrelated requests from different sessions.
@@ -237,7 +212,7 @@ namespace SMBLibrary.Server
                 ulong sessionID = responseChain[0].Header.SessionID;
                 if (sessionID != 0)
                 {
-                    SMB2Session session = ((SMB2ConnectionState)state).GetSession(sessionID);
+                    SMB2Session session = sMB2ConnectionState.GetSession(sessionID);
                     if (session != null)
                     {
                         signingKey = session.SigningKey;
@@ -245,7 +220,7 @@ namespace SMBLibrary.Server
                 }
             }
 
-            SessionMessagePacket packet = new SessionMessagePacket();
+            SessionMessagePacket packet = new();
             SMB2Dialect smb2Dialect = (signingKey != null) ? ToSMB2Dialect(state.Dialect) : SMB2Dialect.SMB2xx;
             packet.Trailer = SMB2Command.GetCommandChainBytes(responseChain, signingKey, smb2Dialect);
             state.SendQueue.Enqueue(packet);
@@ -254,17 +229,13 @@ namespace SMBLibrary.Server
 
         internal static SMB2Dialect ToSMB2Dialect(SMBDialect smbDialect)
         {
-            switch (smbDialect)
+            return smbDialect switch
             {
-                case SMBDialect.SMB202:
-                    return SMB2Dialect.SMB202;
-                case SMBDialect.SMB210:
-                    return SMB2Dialect.SMB210;
-                case SMBDialect.SMB300:
-                    return SMB2Dialect.SMB300;
-                default:
-                    throw new ArgumentException("Unsupported SMB2 Dialect: " + smbDialect.ToString());
-            }
+                SMBDialect.SMB202 => SMB2Dialect.SMB202,
+                SMBDialect.SMB210 => SMB2Dialect.SMB210,
+                SMBDialect.SMB300 => SMB2Dialect.SMB300,
+                _ => throw new ArgumentException("Unsupported SMB2 Dialect: " + smbDialect.ToString()),
+            };
         }
 
         private static void UpdateSMB2Header(SMB2Command response, SMB2Command request, ConnectionState state)
@@ -283,9 +254,9 @@ namespace SMBLibrary.Server
                 response.Header.TreeID = request.Header.TreeID;
             }
             bool signingRequired = false;
-            if (state is SMB2ConnectionState)
+            if (state is SMB2ConnectionState sMB2ConnectionState)
             {
-                SMB2Session session = ((SMB2ConnectionState)state).GetSession(response.Header.SessionID);
+                SMB2Session session = sMB2ConnectionState.GetSession(response.Header.SessionID);
                 if (session != null && session.SigningRequired)
                 {
                     signingRequired = true;
@@ -313,90 +284,56 @@ namespace SMBLibrary.Server
 
         private static FileID? GetRequestFileID(SMB2Command command)
         {
-            if (command is ChangeNotifyRequest)
+            return command switch
             {
-                return ((ChangeNotifyRequest)command).FileId;
-            }
-            else if (command is CloseRequest)
-            {
-                return ((CloseRequest)command).FileId;
-            }
-            else if (command is FlushRequest)
-            {
-                return ((FlushRequest)command).FileId;
-            }
-            else if (command is IOCtlRequest)
-            {
-                return ((IOCtlRequest)command).FileId;
-            }
-            else if (command is LockRequest)
-            {
-                return ((LockRequest)command).FileId;
-            }
-            else if (command is QueryDirectoryRequest)
-            {
-                return ((QueryDirectoryRequest)command).FileId;
-            }
-            else if (command is QueryInfoRequest)
-            {
-                return ((QueryInfoRequest)command).FileId;
-            }
-            else if (command is ReadRequest)
-            {
-                return ((ReadRequest)command).FileId;
-            }
-            else if (command is SetInfoRequest)
-            {
-                return ((SetInfoRequest)command).FileId;
-            }
-            else if (command is WriteRequest)
-            {
-                return ((WriteRequest)command).FileId;
-            }
-            return null;
+                ChangeNotifyRequest changeNotifyRequest => changeNotifyRequest.FileId,
+                CloseRequest closeRequest => closeRequest.FileId,
+                FlushRequest flushRequest => flushRequest.FileId,
+                IOCtlRequest iOCtlRequest => iOCtlRequest.FileId,
+                LockRequest lockRequest => lockRequest.FileId,
+                QueryDirectoryRequest queryDirectoryRequest => queryDirectoryRequest.FileId,
+                QueryInfoRequest queryInfoRequest => queryInfoRequest.FileId,
+                ReadRequest readRequest => readRequest.FileId,
+                SetInfoRequest setInfoRequest => setInfoRequest.FileId,
+                WriteRequest writeRequest => writeRequest.FileId,
+                _ => null,
+            };
         }
 
         private static void SetRequestFileID(SMB2Command command, FileID fileID)
         {
-            if (command is ChangeNotifyRequest)
+            switch (command)
             {
-                ((ChangeNotifyRequest)command).FileId = fileID;
-            }
-            else if (command is CloseRequest)
-            {
-                ((CloseRequest)command).FileId = fileID;
-            }
-            else if (command is FlushRequest)
-            {
-                ((FlushRequest)command).FileId = fileID;
-            }
-            else if (command is IOCtlRequest)
-            {
-                ((IOCtlRequest)command).FileId = fileID;
-            }
-            else if (command is LockRequest)
-            {
-                ((LockRequest)command).FileId = fileID;
-            }
-            else if (command is QueryDirectoryRequest)
-            {
-                ((QueryDirectoryRequest)command).FileId = fileID;
-            }
-            else if (command is QueryInfoRequest)
-            {
-                ((QueryInfoRequest)command).FileId = fileID;
-            }
-            else if (command is ReadRequest)
-            {
-                ((ReadRequest)command).FileId = fileID;
-            }
-            else if (command is SetInfoRequest)
-            {
-                ((SetInfoRequest)command).FileId = fileID;
-            }
-            else if (command is WriteRequest)
-            {
-                ((WriteRequest)command).FileId = fileID;
+                case ChangeNotifyRequest changeNotifyRequest:
+                    changeNotifyRequest.FileId = fileID;
+                    break;
+                case CloseRequest closeRequest:
+                    closeRequest.FileId = fileID;
+                    break;
+                case FlushRequest flushRequest:
+                    flushRequest.FileId = fileID;
+                    break;
+                case IOCtlRequest iOCtlRequest:
+                    iOCtlRequest.FileId = fileID;
+                    break;
+                case LockRequest lockRequest:
+                    lockRequest.FileId = fileID;
+                    break;
+                case QueryDirectoryRequest queryDirectoryRequest:
+                    queryDirectoryRequest.FileId = fileID;
+                    break;
+                case QueryInfoRequest queryInfoRequest:
+                    queryInfoRequest.FileId = fileID;
+                    break;
+                case ReadRequest readRequest:
+                    readRequest.FileId = fileID;
+                    break;
+                case SetInfoRequest setInfoRequest:
+                    setInfoRequest.FileId = fileID;
+                    break;
+                case WriteRequest writeRequest:
+                    writeRequest.FileId = fileID;
+                    break;
             }
         }
 
@@ -408,13 +345,13 @@ namespace SMBLibrary.Server
 
         private static FileID? GetResponseFileID(SMB2Command command)
         {
-            if (command is CreateResponse)
+            if (command is CreateResponse createResponse)
             {
-                return ((CreateResponse)command).FileId;
+                return createResponse.FileId;
             }
-            else if (command is IOCtlResponse)
+            else if (command is IOCtlResponse iOCtlResponse)
             {
-                return ((IOCtlResponse)command).FileId;
+                return iOCtlResponse.FileId;
             }
             return null;
         }

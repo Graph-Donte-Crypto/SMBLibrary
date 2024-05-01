@@ -15,10 +15,10 @@ namespace SMBLibrary.Server
     internal class SMB2ConnectionState : ConnectionState
     {
         // Key is SessionID
-        private Dictionary<ulong, SMB2Session> m_sessions = new Dictionary<ulong, SMB2Session>();
+        private Dictionary<ulong, SMB2Session> m_sessions = [];
         private ulong m_nextSessionID = 1;
         // Key is AsyncID
-        private Dictionary<ulong, SMB2AsyncContext> m_pendingRequests = new Dictionary<ulong, SMB2AsyncContext>();
+        private Dictionary<ulong, SMB2AsyncContext> m_pendingRequests = [];
         private ulong m_nextAsyncID = 1;
 
         public SMB2ConnectionState(ConnectionState state) : base(state)
@@ -45,7 +45,7 @@ namespace SMBLibrary.Server
 
         public SMB2Session CreateSession(ulong sessionID, string userName, string machineName, byte[] sessionKey, object accessToken, bool signingRequired, byte[] signingKey)
         {
-            SMB2Session session = new SMB2Session(this, sessionID, userName, machineName, sessionKey, accessToken, signingRequired, signingKey);
+            SMB2Session session = new(this, sessionID, userName, machineName, sessionKey, accessToken, signingRequired, signingKey);
             lock (m_sessions)
             {
                 m_sessions.Add(sessionID, session);
@@ -55,15 +55,13 @@ namespace SMBLibrary.Server
 
         public SMB2Session GetSession(ulong sessionID)
         {
-            SMB2Session session;
-            m_sessions.TryGetValue(sessionID, out session);
+            m_sessions.TryGetValue(sessionID, out SMB2Session session);
             return session;
         }
 
         public void RemoveSession(ulong sessionID)
         {
-            SMB2Session session;
-            m_sessions.TryGetValue(sessionID, out session);
+            m_sessions.TryGetValue(sessionID, out SMB2Session session);
             if (session != null)
             {
                 session.Close();
@@ -89,7 +87,7 @@ namespace SMBLibrary.Server
 
         public override List<SessionInformation> GetSessionsInformation()
         {
-            List<SessionInformation> result = new List<SessionInformation>();
+            List<SessionInformation> result = [];
             lock (m_sessions)
             {
                 foreach (SMB2Session session in m_sessions.Values)
@@ -125,12 +123,14 @@ namespace SMBLibrary.Server
             {
                 return null;
             }
-            SMB2AsyncContext context = new SMB2AsyncContext();
-            context.AsyncID = asyncID.Value;
-            context.FileID = fileID;
-            context.Connection = connection;
-            context.SessionID = sessionID;
-            context.TreeID = treeID;
+            SMB2AsyncContext context = new()
+            {
+                AsyncID = asyncID.Value,
+                FileID = fileID,
+                Connection = connection,
+                SessionID = sessionID,
+                TreeID = treeID
+            };
             lock (m_pendingRequests)
             {
                 m_pendingRequests.Add(asyncID.Value, context);

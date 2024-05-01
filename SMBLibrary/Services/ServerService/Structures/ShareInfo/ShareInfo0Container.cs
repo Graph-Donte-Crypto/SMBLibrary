@@ -69,10 +69,7 @@ namespace SMBLibrary.Services
 
         public void Add(ShareInfo0Entry entry)
         {
-            if (Entries == null)
-            {
-                Entries = new NDRConformantArray<ShareInfo0Entry>();
-            }
+            Entries ??= new NDRConformantArray<ShareInfo0Entry>();
             Entries.Add(entry);
         }
     }

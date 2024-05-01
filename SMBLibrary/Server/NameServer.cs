@@ -10,6 +10,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using SMBLibrary.NetBios;
 using Utilities;
 
@@ -23,8 +24,8 @@ namespace SMBLibrary.Server
         public static readonly int NetBiosNameServicePort = 137;
         public static readonly string WorkgroupName = "WORKGROUP";
 
-        private IPAddress m_serverAddress;
-        private IPAddress m_broadcastAddress;
+        private readonly IPAddress m_serverAddress;
+        private readonly IPAddress m_broadcastAddress;
         private UdpClient m_client;
         private bool m_listening;
 
@@ -54,9 +55,7 @@ namespace SMBLibrary.Server
                 m_client = new UdpClient(new IPEndPoint(m_serverAddress, NetBiosNameServicePort));
                 m_client.BeginReceive(ReceiveCallback, null);
 
-                ThreadStart threadStart = new ThreadStart(RegisterNetBIOSName);
-                Thread thread = new Thread(threadStart);
-                thread.Start();
+                Task.Run(RegisterNetBIOSName);
             }
         }
 
@@ -91,7 +90,7 @@ namespace SMBLibrary.Server
             // Process buffer
             if (buffer.Length > NameServicePacketHeader.Length)
             {
-                NameServicePacketHeader header = new NameServicePacketHeader(buffer, 0);
+                NameServicePacketHeader header = new(buffer, 0);
                 if (header.OpCode == NameServiceOperation.QueryRequest)
                 {
                     NameQueryRequest request = null;
@@ -113,10 +112,10 @@ namespace SMBLibrary.Server
                             
                             if (nameMatch && ((suffix == NetBiosSuffix.WorkstationService) || (suffix == NetBiosSuffix.FileServiceService)))
                             {
-                                PositiveNameQueryResponse response = new PositiveNameQueryResponse();
+                                PositiveNameQueryResponse response = new();
                                 response.Header.TransactionID = request.Header.TransactionID;
                                 response.Resource.Name = request.Question.Name;
-                                NameFlags nameFlags = new NameFlags();
+                                NameFlags nameFlags = new();
                                 response.Addresses.Add(m_serverAddress.GetAddressBytes(), nameFlags);
                                 byte[] responseBytes = response.GetBytes();
                                 m_client.Send(responseBytes, responseBytes.Length, remoteEP);
@@ -124,14 +123,16 @@ namespace SMBLibrary.Server
                         }
                         else // NBStat
                         {
-                            NodeStatusResponse response = new NodeStatusResponse();
+                            NodeStatusResponse response = new();
                             response.Header.TransactionID = request.Header.TransactionID;
                             response.Resource.Name = request.Question.Name;
-                            NameFlags nameFlags = new NameFlags();
+                            NameFlags nameFlags = new();
                             string name1 = NetBiosUtils.GetMSNetBiosName(Environment.MachineName, NetBiosSuffix.WorkstationService);
                             string name2 = NetBiosUtils.GetMSNetBiosName(Environment.MachineName, NetBiosSuffix.FileServiceService);
-                            NameFlags nameFlags3 = new NameFlags();
-                            nameFlags3.WorkGroup = true;
+                            NameFlags nameFlags3 = new()
+                            {
+                                WorkGroup = true
+                            };
                             string name3 = NetBiosUtils.GetMSNetBiosName(WorkgroupName, NetBiosSuffix.WorkstationService);
                             response.Names.Add(name1, nameFlags);
                             response.Names.Add(name2, nameFlags);
@@ -163,9 +164,9 @@ namespace SMBLibrary.Server
 
         private void RegisterNetBIOSName()
         {
-            NameRegistrationRequest request1 = new NameRegistrationRequest(Environment.MachineName, NetBiosSuffix.WorkstationService, m_serverAddress);
-            NameRegistrationRequest request2 = new NameRegistrationRequest(Environment.MachineName, NetBiosSuffix.FileServiceService, m_serverAddress);
-            NameRegistrationRequest request3 = new NameRegistrationRequest(WorkgroupName, NetBiosSuffix.WorkstationService, m_serverAddress);
+            NameRegistrationRequest request1 = new(Environment.MachineName, NetBiosSuffix.WorkstationService, m_serverAddress);
+            NameRegistrationRequest request2 = new(Environment.MachineName, NetBiosSuffix.FileServiceService, m_serverAddress);
+            NameRegistrationRequest request3 = new(WorkgroupName, NetBiosSuffix.WorkstationService, m_serverAddress);
             request3.NameFlags.WorkGroup = true;
             RegisterName(request1);
             RegisterName(request2);
@@ -176,7 +177,7 @@ namespace SMBLibrary.Server
         {
             byte[] packet = request.GetBytes();
 
-            IPEndPoint broadcastEP = new IPEndPoint(m_broadcastAddress, NetBiosNameServicePort);
+            IPEndPoint broadcastEP = new(m_broadcastAddress, NetBiosNameServicePort);
             for (int index = 0; index < 4; index++)
             {
                 try
@@ -189,7 +190,7 @@ namespace SMBLibrary.Server
 
                 if (index < 3)
                 {
-                    System.Threading.Thread.Sleep(250);
+                    Task.Delay(250).Wait();
                 }
             }
         }

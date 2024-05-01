@@ -18,9 +18,9 @@ namespace SMBLibrary.Authentication
             public int NumberOfAttempts;
         }
 
-        private int m_maxLoginAttemptsInWindow;
-        private TimeSpan m_loginWindowDuration;
-        private Dictionary<string, LoginEntry> m_loginEntries = new Dictionary<string, LoginEntry>();
+        private readonly int m_maxLoginAttemptsInWindow;
+        private readonly TimeSpan m_loginWindowDuration;
+        private readonly Dictionary<string, LoginEntry> m_loginEntries = [];
 
         public LoginCounter(int maxLoginAttemptsInWindow, TimeSpan loginWindowDuration)
         {
@@ -37,8 +37,7 @@ namespace SMBLibrary.Authentication
         {
             lock (m_loginEntries)
             {
-                LoginEntry entry;
-                if (m_loginEntries.TryGetValue(userID, out entry))
+                if (m_loginEntries.TryGetValue(userID, out LoginEntry entry))
                 {
                     if (entry.LoginWindowStartDT.Add(m_loginWindowDuration) >= DateTime.UtcNow)
                     {
@@ -65,9 +64,11 @@ namespace SMBLibrary.Authentication
                     {
                         return true;
                     }
-                    entry = new LoginEntry();
-                    entry.LoginWindowStartDT = DateTime.UtcNow;
-                    entry.NumberOfAttempts = 1;
+                    entry = new LoginEntry
+                    {
+                        LoginWindowStartDT = DateTime.UtcNow,
+                        NumberOfAttempts = 1
+                    };
                     m_loginEntries.Add(userID, entry);
                 }
                 return (entry.NumberOfAttempts < m_maxLoginAttemptsInWindow);

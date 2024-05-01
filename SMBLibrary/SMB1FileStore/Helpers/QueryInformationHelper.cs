@@ -16,27 +16,18 @@ namespace SMBLibrary.SMB1
         /// <exception cref="SMBLibrary.UnsupportedInformationLevelException"></exception>
         public static FileInformationClass ToFileInformationClass(QueryInformationLevel informationLevel)
         {
-            switch (informationLevel)
+            return informationLevel switch
             {
-                case QueryInformationLevel.SMB_QUERY_FILE_BASIC_INFO:
-                    return FileInformationClass.FileBasicInformation;
-                case QueryInformationLevel.SMB_QUERY_FILE_STANDARD_INFO:
-                    return FileInformationClass.FileStandardInformation;
-                case QueryInformationLevel.SMB_QUERY_FILE_EA_INFO:
-                    return FileInformationClass.FileEaInformation;
-                case QueryInformationLevel.SMB_QUERY_FILE_NAME_INFO:
-                    return FileInformationClass.FileNameInformation;
-                case QueryInformationLevel.SMB_QUERY_FILE_ALL_INFO:
-                    return FileInformationClass.FileAllInformation;
-                case QueryInformationLevel.SMB_QUERY_FILE_ALT_NAME_INFO:
-                    return FileInformationClass.FileAlternateNameInformation;
-                case QueryInformationLevel.SMB_QUERY_FILE_STREAM_INFO:
-                    return FileInformationClass.FileStreamInformation;
-                case QueryInformationLevel.SMB_QUERY_FILE_COMPRESSION_INFO:
-                    return FileInformationClass.FileCompressionInformation;
-                default:
-                    throw new UnsupportedInformationLevelException();
-            }
+                QueryInformationLevel.SMB_QUERY_FILE_BASIC_INFO => FileInformationClass.FileBasicInformation,
+                QueryInformationLevel.SMB_QUERY_FILE_STANDARD_INFO => FileInformationClass.FileStandardInformation,
+                QueryInformationLevel.SMB_QUERY_FILE_EA_INFO => FileInformationClass.FileEaInformation,
+                QueryInformationLevel.SMB_QUERY_FILE_NAME_INFO => FileInformationClass.FileNameInformation,
+                QueryInformationLevel.SMB_QUERY_FILE_ALL_INFO => FileInformationClass.FileAllInformation,
+                QueryInformationLevel.SMB_QUERY_FILE_ALT_NAME_INFO => FileInformationClass.FileAlternateNameInformation,
+                QueryInformationLevel.SMB_QUERY_FILE_STREAM_INFO => FileInformationClass.FileStreamInformation,
+                QueryInformationLevel.SMB_QUERY_FILE_COMPRESSION_INFO => FileInformationClass.FileCompressionInformation,
+                _ => throw new UnsupportedInformationLevelException(),
+            };
         }
 
         public static QueryInformation FromFileInformation(FileInformation fileInformation)
@@ -128,27 +119,18 @@ namespace SMBLibrary.SMB1
         /// <exception cref="SMBLibrary.UnsupportedInformationLevelException"></exception>
         public static QueryInformationLevel ToFileInformationLevel(FileInformationClass informationClass)
         {
-            switch (informationClass)
+            return informationClass switch
             {
-                case FileInformationClass.FileBasicInformation:
-                    return QueryInformationLevel.SMB_QUERY_FILE_BASIC_INFO;
-                case FileInformationClass.FileStandardInformation:
-                    return QueryInformationLevel.SMB_QUERY_FILE_STANDARD_INFO;
-                case FileInformationClass.FileEaInformation:
-                    return QueryInformationLevel.SMB_QUERY_FILE_EA_INFO;
-                case FileInformationClass.FileNameInformation:
-                    return QueryInformationLevel.SMB_QUERY_FILE_NAME_INFO;
-                case FileInformationClass.FileAllInformation:
-                    return QueryInformationLevel.SMB_QUERY_FILE_ALL_INFO;
-                case FileInformationClass.FileAlternateNameInformation:
-                    return QueryInformationLevel.SMB_QUERY_FILE_ALT_NAME_INFO;
-                case FileInformationClass.FileStreamInformation:
-                    return QueryInformationLevel.SMB_QUERY_FILE_STREAM_INFO;
-                case FileInformationClass.FileCompressionInformation:
-                    return QueryInformationLevel.SMB_QUERY_FILE_COMPRESSION_INFO;
-                default:
-                    throw new UnsupportedInformationLevelException();
-            }
+                FileInformationClass.FileBasicInformation => QueryInformationLevel.SMB_QUERY_FILE_BASIC_INFO,
+                FileInformationClass.FileStandardInformation => QueryInformationLevel.SMB_QUERY_FILE_STANDARD_INFO,
+                FileInformationClass.FileEaInformation => QueryInformationLevel.SMB_QUERY_FILE_EA_INFO,
+                FileInformationClass.FileNameInformation => QueryInformationLevel.SMB_QUERY_FILE_NAME_INFO,
+                FileInformationClass.FileAllInformation => QueryInformationLevel.SMB_QUERY_FILE_ALL_INFO,
+                FileInformationClass.FileAlternateNameInformation => QueryInformationLevel.SMB_QUERY_FILE_ALT_NAME_INFO,
+                FileInformationClass.FileStreamInformation => QueryInformationLevel.SMB_QUERY_FILE_STREAM_INFO,
+                FileInformationClass.FileCompressionInformation => QueryInformationLevel.SMB_QUERY_FILE_COMPRESSION_INFO,
+                _ => throw new UnsupportedInformationLevelException(),
+            };
         }
 
         public static FileInformation ToFileInformation(QueryInformation queryInformation)

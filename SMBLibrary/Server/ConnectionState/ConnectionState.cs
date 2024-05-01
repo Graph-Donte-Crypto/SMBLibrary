@@ -18,39 +18,40 @@ namespace SMBLibrary.Server
 
     internal class ConnectionState
     {
-        private Socket m_clientSocket;
-        private IPEndPoint m_clientEndPoint;
-        private NBTConnectionReceiveBuffer m_receiveBuffer;
-        private BlockingQueue<SessionPacket> m_sendQueue;
-        private DateTime m_creationDT;
-        private DateTime m_lastReceiveDT;
-        private Reference<DateTime> m_lastSendDTRef; // We must use a reference because the sender thread will keep using the original ConnectionState object
-        private LogDelegate LogToServerHandler;
+        public Socket ClientSocket { get; private set; }
+        public IPEndPoint ClientEndPoint { get; private set; }
+        public NBTConnectionReceiveBuffer ReceiveBuffer { get; private set; }
+        public BlockingQueue<SessionPacket> SendQueue { get; private set; }
+        public DateTime CreationDT { get; private set; }
+        public DateTime LastReceiveDT { get; private set; }
+        private Reference<DateTime> LastSendDTRef { get; set; } // We must use a reference because the sender thread will keep using the original ConnectionState object
+        public DateTime LastSendDT => LastSendDTRef.Value;
+        private readonly LogDelegate LogToServerHandler;
         public SMBDialect Dialect;
         public GSSContext AuthenticationContext;
 
         public ConnectionState(Socket clientSocket, IPEndPoint clientEndPoint, LogDelegate logToServerHandler)
         {
-            m_clientSocket = clientSocket;
-            m_clientEndPoint = clientEndPoint;
-            m_receiveBuffer = new NBTConnectionReceiveBuffer();
-            m_sendQueue = new BlockingQueue<SessionPacket>();
-            m_creationDT = DateTime.UtcNow;
-            m_lastReceiveDT = DateTime.UtcNow;
-            m_lastSendDTRef = DateTime.UtcNow;
+            ClientSocket = clientSocket;
+            ClientEndPoint = clientEndPoint;
+            ReceiveBuffer = new NBTConnectionReceiveBuffer();
+            SendQueue = new BlockingQueue<SessionPacket>();
+            CreationDT = DateTime.UtcNow;
+            LastReceiveDT = DateTime.UtcNow;
+            LastSendDTRef = DateTime.UtcNow;
             LogToServerHandler = logToServerHandler;
             Dialect = SMBDialect.NotSet;
         }
 
         public ConnectionState(ConnectionState state)
         {
-            m_clientSocket = state.ClientSocket;
-            m_clientEndPoint = state.ClientEndPoint;
-            m_receiveBuffer = state.ReceiveBuffer;
-            m_sendQueue = state.SendQueue;
-            m_creationDT = state.CreationDT;
-            m_lastReceiveDT = state.LastReceiveDT;
-            m_lastSendDTRef = state.LastSendDTRef;
+            ClientSocket = state.ClientSocket;
+            ClientEndPoint = state.ClientEndPoint;
+            ReceiveBuffer = state.ReceiveBuffer;
+            SendQueue = state.SendQueue;
+            CreationDT = state.CreationDT;
+            LastReceiveDT = state.LastReceiveDT;
+            LastSendDTRef = state.LastSendDTRef;
             LogToServerHandler = state.LogToServerHandler;
             Dialect = state.Dialect;
         }
@@ -64,16 +65,13 @@ namespace SMBLibrary.Server
 
         public virtual List<SessionInformation> GetSessionsInformation()
         {
-            return new List<SessionInformation>();
+            return [];
         }
 
         public void LogToServer(Severity severity, string message)
         {
             message = String.Format("[{0}] {1}", ConnectionIdentifier, message);
-            if (LogToServerHandler != null)
-            {
-                LogToServerHandler(severity, message);
-            }
+            LogToServerHandler?.Invoke(severity, message);
         }
 
         public void LogToServer(Severity severity, string message, params object[] args)
@@ -81,90 +79,19 @@ namespace SMBLibrary.Server
             LogToServer(severity, String.Format(message, args));
         }
 
-        public Socket ClientSocket
-        {
-            get
-            {
-                return m_clientSocket;
-            }
-        }
-
-        public IPEndPoint ClientEndPoint
-        {
-            get
-            {
-                return m_clientEndPoint;
-            }
-        }
-
-        public NBTConnectionReceiveBuffer ReceiveBuffer
-        {
-            get
-            {
-                return m_receiveBuffer;
-            }
-        }
-
-        public BlockingQueue<SessionPacket> SendQueue
-        {
-            get
-            {
-                return m_sendQueue;
-            }
-        }
-
-        public DateTime CreationDT
-        {
-            get
-            {
-                return m_creationDT;
-            }
-        }
-
-        public DateTime LastReceiveDT
-        {
-            get
-            {
-                return m_lastReceiveDT;
-            }
-        }
-
-        public DateTime LastSendDT
-        {
-            get
-            {
-                return LastSendDTRef.Value;
-            }
-        }
-
-        internal Reference<DateTime> LastSendDTRef
-        {
-            get
-            {
-                return m_lastSendDTRef;
-            }
-        }
-
         public void UpdateLastReceiveDT()
         {
-            m_lastReceiveDT = DateTime.UtcNow;
+            LastReceiveDT = DateTime.UtcNow;
         }
 
         public void UpdateLastSendDT()
         {
-            m_lastSendDTRef.Value = DateTime.UtcNow;
+            LastSendDTRef.Value = DateTime.UtcNow;
         }
 
-        public string ConnectionIdentifier
-        {
-            get
-            {
-                if (ClientEndPoint != null)
-                {
-                    return ClientEndPoint.Address + ":" + ClientEndPoint.Port;
-                }
-                return String.Empty;
-            }
-        }
+        public string ConnectionIdentifier 
+            => ClientEndPoint is not null 
+                ? ClientEndPoint.Address + ":" + ClientEndPoint.Port 
+                : string.Empty;
     }
 }

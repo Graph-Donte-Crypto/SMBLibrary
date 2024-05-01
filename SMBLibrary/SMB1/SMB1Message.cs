@@ -18,7 +18,7 @@ namespace SMBLibrary.SMB1
     public class SMB1Message
     {
         public SMB1Header Header;
-        public List<SMB1Command> Commands = new List<SMB1Command>();
+        public List<SMB1Command> Commands = [];
 
         public SMB1Message()
         {
@@ -30,9 +30,8 @@ namespace SMBLibrary.SMB1
             Header = new SMB1Header(buffer);
             SMB1Command command = SMB1Command.ReadCommand(buffer, SMB1Header.Length, Header.Command, Header);
             Commands.Add(command);
-            while(command is SMBAndXCommand)
+            while(command is SMBAndXCommand andXCommand)
             {
-                SMBAndXCommand andXCommand = (SMBAndXCommand)command;
                 if (andXCommand.AndXCommand == CommandName.SMB_COM_NO_ANDX_COMMAND)
                 {
                     break;
@@ -51,19 +50,19 @@ namespace SMBLibrary.SMB1
 
             for (int index = 0; index < Commands.Count - 1; index++)
             {
-                if (!(Commands[index] is SMBAndXCommand))
+                if (Commands[index] is not SMBAndXCommand)
                 {
                     throw new ArgumentException("Invalid command sequence");
                 }
             }
 
-            SMB1Command lastCommand = Commands[Commands.Count - 1];
-            if (lastCommand is SMBAndXCommand)
+            SMB1Command lastCommand = Commands[^1];
+            if (lastCommand is SMBAndXCommand sMBAndXCommand)
             {
-                ((SMBAndXCommand)lastCommand).AndXCommand = CommandName.SMB_COM_NO_ANDX_COMMAND;
+                sMBAndXCommand.AndXCommand = CommandName.SMB_COM_NO_ANDX_COMMAND;
             }
 
-            List<byte[]> sequence = new List<byte[]>();
+            List<byte[]> sequence = [];
             int length = SMB1Header.Length;
             byte[] commandBytes;
             for (int index = 0; index < Commands.Count - 1; index++)

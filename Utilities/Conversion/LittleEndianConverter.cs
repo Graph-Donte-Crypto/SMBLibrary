@@ -67,9 +67,7 @@ namespace Utilities
                 // reverse the order of 'bytes'
                 for(int index = 0; index < 4; index++)
                 {
-                    byte temp = bytes[index];
-                    bytes[index] = bytes[7 - index];
-                    bytes[7 - index] = temp;
+                    (bytes[7 - index], bytes[index]) = (bytes[index], bytes[7 - index]);
                 }
             }
             return BitConverter.ToDouble(bytes, 0);
@@ -93,9 +91,7 @@ namespace Utilities
 
         public static byte[] GetBytes(ushort value)
         {
-            byte[] result = new byte[2];
-            result[0] = (byte)((value >> 0) & 0xFF);
-            result[1] = (byte)((value >> 8) & 0xFF);
+            byte[] result = [(byte)((value >> 0) & 0xFF), (byte)((value >> 8) & 0xFF)];
             return result;
         }
 

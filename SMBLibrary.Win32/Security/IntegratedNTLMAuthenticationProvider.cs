@@ -69,8 +69,7 @@ namespace SMBLibrary.Win32.Security
                 return NTStatus.SEC_E_INVALID_TOKEN;
             }
 
-            AuthContext authContext = context as AuthContext;
-            if (authContext == null)
+            if (context is not AuthContext authContext)
             {
                 // There are two possible reasons for authContext to be null:
                 // 1. We have a bug in our implementation, let's assume that's not the case,
@@ -141,8 +140,7 @@ namespace SMBLibrary.Win32.Security
 
         public override bool DeleteSecurityContext(ref object context)
         {
-            AuthContext authContext = context as AuthContext;
-            if (authContext == null)
+            if (context is not AuthContext)
             {
                 return false;
             }
@@ -159,8 +157,7 @@ namespace SMBLibrary.Win32.Security
 
         public override object GetContextAttribute(object context, GSSAttributeName attributeName)
         {
-            AuthContext authContext = context as AuthContext;
-            if (authContext != null)
+            if (context is AuthContext authContext)
             {
                 switch (attributeName)
                 {
@@ -205,31 +202,20 @@ namespace SMBLibrary.Win32.Security
 
         public static NTStatus ToNTStatus(Win32Error errorCode)
         {
-            switch (errorCode)
+            return errorCode switch
             {
-                case Win32Error.ERROR_NO_TOKEN:
-                    return NTStatus.SEC_E_INVALID_TOKEN;
-                case Win32Error.ERROR_ACCOUNT_RESTRICTION:
-                    return NTStatus.STATUS_ACCOUNT_RESTRICTION;
-                case Win32Error.ERROR_INVALID_LOGON_HOURS:
-                    return NTStatus.STATUS_INVALID_LOGON_HOURS;
-                case Win32Error.ERROR_INVALID_WORKSTATION:
-                    return NTStatus.STATUS_INVALID_WORKSTATION;
-                case Win32Error.ERROR_PASSWORD_EXPIRED:
-                    return NTStatus.STATUS_PASSWORD_EXPIRED;
-                case Win32Error.ERROR_ACCOUNT_DISABLED:
-                    return NTStatus.STATUS_ACCOUNT_DISABLED;
-                case Win32Error.ERROR_LOGON_TYPE_NOT_GRANTED:
-                    return NTStatus.STATUS_LOGON_TYPE_NOT_GRANTED;
-                case Win32Error.ERROR_ACCOUNT_EXPIRED:
-                    return NTStatus.STATUS_ACCOUNT_EXPIRED;
-                case Win32Error.ERROR_PASSWORD_MUST_CHANGE:
-                    return NTStatus.STATUS_PASSWORD_MUST_CHANGE;
-                case Win32Error.ERROR_ACCOUNT_LOCKED_OUT:
-                    return NTStatus.STATUS_ACCOUNT_LOCKED_OUT;
-                default:
-                    return NTStatus.STATUS_LOGON_FAILURE;
-            }
+                Win32Error.ERROR_NO_TOKEN => NTStatus.SEC_E_INVALID_TOKEN,
+                Win32Error.ERROR_ACCOUNT_RESTRICTION => NTStatus.STATUS_ACCOUNT_RESTRICTION,
+                Win32Error.ERROR_INVALID_LOGON_HOURS => NTStatus.STATUS_INVALID_LOGON_HOURS,
+                Win32Error.ERROR_INVALID_WORKSTATION => NTStatus.STATUS_INVALID_WORKSTATION,
+                Win32Error.ERROR_PASSWORD_EXPIRED => NTStatus.STATUS_PASSWORD_EXPIRED,
+                Win32Error.ERROR_ACCOUNT_DISABLED => NTStatus.STATUS_ACCOUNT_DISABLED,
+                Win32Error.ERROR_LOGON_TYPE_NOT_GRANTED => NTStatus.STATUS_LOGON_TYPE_NOT_GRANTED,
+                Win32Error.ERROR_ACCOUNT_EXPIRED => NTStatus.STATUS_ACCOUNT_EXPIRED,
+                Win32Error.ERROR_PASSWORD_MUST_CHANGE => NTStatus.STATUS_PASSWORD_MUST_CHANGE,
+                Win32Error.ERROR_ACCOUNT_LOCKED_OUT => NTStatus.STATUS_ACCOUNT_LOCKED_OUT,
+                _ => NTStatus.STATUS_LOGON_FAILURE,
+            };
         }
     }
 }

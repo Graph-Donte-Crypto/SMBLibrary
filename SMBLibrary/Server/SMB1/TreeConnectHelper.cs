@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using SMBLibrary.Services;
 using SMBLibrary.SMB1;
 using Utilities;
 
@@ -50,9 +51,10 @@ namespace SMBLibrary.Server.SMB1
                 }
 
                 serviceName = ServiceName.DiskShare;
-                supportFlags = OptionalSupportFlags.SMB_SUPPORT_SEARCH_BITS | GetCachingSupportFlags(((FileSystemShare)share).CachingPolicy);
 
-                if (!((FileSystemShare)share).HasReadAccess(session.SecurityContext, @"\"))
+                supportFlags = OptionalSupportFlags.SMB_SUPPORT_SEARCH_BITS | GetCachingSupportFlags(share.CachingPolicy);
+
+                if (!share.HasAccess(session.SecurityContext, @"\", System.IO.FileAccess.Read))
                 {
                     state.LogToServer(Severity.Verbose, "Tree Connect to '{0}' failed. User '{1}' was denied access.", share.Name, session.UserName);
                     header.Status = NTStatus.STATUS_ACCESS_DENIED;
@@ -79,43 +81,43 @@ namespace SMBLibrary.Server.SMB1
 
         private static OptionalSupportFlags GetCachingSupportFlags(CachingPolicy cachingPolicy)
         {
-            switch (cachingPolicy)
+            return cachingPolicy switch
             {
-                case CachingPolicy.ManualCaching:
-                    return OptionalSupportFlags.SMB_CSC_CACHE_MANUAL_REINT;
-                case CachingPolicy.AutoCaching:
-                    return OptionalSupportFlags.SMB_CSC_CACHE_AUTO_REINT;
-                case CachingPolicy.VideoCaching:
-                    return OptionalSupportFlags.SMB_CSC_CACHE_VDO;
-                default:
-                    return OptionalSupportFlags.SMB_CSC_NO_CACHING;
-            }
+                CachingPolicy.ManualCaching => OptionalSupportFlags.SMB_CSC_CACHE_MANUAL_REINT,
+                CachingPolicy.AutoCaching => OptionalSupportFlags.SMB_CSC_CACHE_AUTO_REINT,
+                CachingPolicy.VideoCaching => OptionalSupportFlags.SMB_CSC_CACHE_VDO,
+                _ => OptionalSupportFlags.SMB_CSC_NO_CACHING,
+            };
         }
 
         private static TreeConnectAndXResponse CreateTreeConnectResponse(ServiceName serviceName, OptionalSupportFlags supportFlags)
         {
-            TreeConnectAndXResponse response = new TreeConnectAndXResponse();
-            response.OptionalSupport = supportFlags;
-            response.NativeFileSystem = String.Empty;
-            response.Service = serviceName;
+            TreeConnectAndXResponse response = new()
+            {
+                OptionalSupport = supportFlags,
+                NativeFileSystem = String.Empty,
+                Service = serviceName
+            };
             return response;
         }
 
         private static TreeConnectAndXResponseExtended CreateTreeConnectResponseExtended(ServiceName serviceName, OptionalSupportFlags supportFlags)
         {
-            TreeConnectAndXResponseExtended response = new TreeConnectAndXResponseExtended();
-            response.OptionalSupport = supportFlags;
-            response.MaximalShareAccessRights = (AccessMask)(FileAccessMask.FILE_READ_DATA | FileAccessMask.FILE_WRITE_DATA | FileAccessMask.FILE_APPEND_DATA |
+            TreeConnectAndXResponseExtended response = new()
+            {
+                OptionalSupport = supportFlags,
+                MaximalShareAccessRights = (AccessMask)(FileAccessMask.FILE_READ_DATA | FileAccessMask.FILE_WRITE_DATA | FileAccessMask.FILE_APPEND_DATA |
                                                              FileAccessMask.FILE_READ_EA | FileAccessMask.FILE_WRITE_EA |
                                                              FileAccessMask.FILE_EXECUTE |
                                                              FileAccessMask.FILE_READ_ATTRIBUTES | FileAccessMask.FILE_WRITE_ATTRIBUTES) |
-                                                             AccessMask.DELETE | AccessMask.READ_CONTROL | AccessMask.WRITE_DAC | AccessMask.WRITE_OWNER | AccessMask.SYNCHRONIZE;
-            response.GuestMaximalShareAccessRights = (AccessMask)(FileAccessMask.FILE_READ_DATA | FileAccessMask.FILE_WRITE_DATA |
+                                                             AccessMask.DELETE | AccessMask.READ_CONTROL | AccessMask.WRITE_DAC | AccessMask.WRITE_OWNER | AccessMask.SYNCHRONIZE,
+                GuestMaximalShareAccessRights = (AccessMask)(FileAccessMask.FILE_READ_DATA | FileAccessMask.FILE_WRITE_DATA |
                                                                   FileAccessMask.FILE_READ_EA | FileAccessMask.FILE_WRITE_EA |
                                                                   FileAccessMask.FILE_READ_ATTRIBUTES | FileAccessMask.FILE_WRITE_ATTRIBUTES) |
-                                                                  AccessMask.READ_CONTROL | AccessMask.SYNCHRONIZE;
-            response.NativeFileSystem = String.Empty;
-            response.Service = serviceName;
+                                                                  AccessMask.READ_CONTROL | AccessMask.SYNCHRONIZE,
+                NativeFileSystem = String.Empty,
+                Service = serviceName
+            };
             return response;
         }
 

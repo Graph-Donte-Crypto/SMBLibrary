@@ -33,27 +33,18 @@ namespace SMBLibrary
 
         public static FileSystemInformation GetFileSystemInformation(byte[] buffer, int offset, FileSystemInformationClass informationClass)
         {
-            switch (informationClass)
+            return informationClass switch
             {
-                case FileSystemInformationClass.FileFsVolumeInformation:
-                    return new FileFsVolumeInformation(buffer, offset);
-                case FileSystemInformationClass.FileFsSizeInformation:
-                    return new FileFsSizeInformation(buffer, offset);
-                case FileSystemInformationClass.FileFsDeviceInformation:
-                    return new FileFsDeviceInformation(buffer, offset);
-                case FileSystemInformationClass.FileFsAttributeInformation:
-                    return new FileFsAttributeInformation(buffer, offset);
-                case FileSystemInformationClass.FileFsControlInformation:
-                    return new FileFsControlInformation(buffer, offset);
-                case FileSystemInformationClass.FileFsFullSizeInformation:
-                    return new FileFsFullSizeInformation(buffer, offset);
-                case FileSystemInformationClass.FileFsObjectIdInformation:
-                    return new FileFsObjectIdInformation(buffer, offset);
-                case FileSystemInformationClass.FileFsSectorSizeInformation:
-                    return new FileFsSectorSizeInformation(buffer, offset);
-                default:
-                    throw new UnsupportedInformationLevelException();
-            }
+                FileSystemInformationClass.FileFsVolumeInformation => new FileFsVolumeInformation(buffer, offset),
+                FileSystemInformationClass.FileFsSizeInformation => new FileFsSizeInformation(buffer, offset),
+                FileSystemInformationClass.FileFsDeviceInformation => new FileFsDeviceInformation(buffer, offset),
+                FileSystemInformationClass.FileFsAttributeInformation => new FileFsAttributeInformation(buffer, offset),
+                FileSystemInformationClass.FileFsControlInformation => new FileFsControlInformation(buffer, offset),
+                FileSystemInformationClass.FileFsFullSizeInformation => new FileFsFullSizeInformation(buffer, offset),
+                FileSystemInformationClass.FileFsObjectIdInformation => new FileFsObjectIdInformation(buffer, offset),
+                FileSystemInformationClass.FileFsSectorSizeInformation => new FileFsSectorSizeInformation(buffer, offset),
+                _ => throw new UnsupportedInformationLevelException(),
+            };
         }
     }
 }

@@ -24,8 +24,6 @@ namespace SMBLibrary.Win32.Security
 
         private static SecHandle AcquireNTLMCredentialsHandle(SEC_WINNT_AUTH_IDENTITY? auth)
         {
-            SecHandle credential;
-            SECURITY_INTEGER expiry;
 
             IntPtr pAuthData;
             if (auth.HasValue)
@@ -38,7 +36,7 @@ namespace SMBLibrary.Win32.Security
                 pAuthData = IntPtr.Zero;
             }
 
-            uint result = AcquireCredentialsHandle(null, "NTLM", SECPKG_CRED_BOTH, IntPtr.Zero, pAuthData, IntPtr.Zero, IntPtr.Zero, out credential, out expiry);
+            uint result = AcquireCredentialsHandle(null, "NTLM", SECPKG_CRED_BOTH, IntPtr.Zero, pAuthData, IntPtr.Zero, IntPtr.Zero, out SecHandle credential, out SECURITY_INTEGER expiry);
             if (pAuthData != IntPtr.Zero)
             {
                 Marshal.FreeHGlobal(pAuthData);
@@ -60,12 +58,10 @@ namespace SMBLibrary.Win32.Security
         {
             SecHandle credentialsHandle = AcquireNTLMCredentialsHandle(domainName, userName, password);
             clientContext = new SecHandle();
-            SecBuffer outputBuffer = new SecBuffer(MAX_TOKEN_SIZE);
-            SecBufferDesc output = new SecBufferDesc(outputBuffer);
-            uint contextAttributes;
-            SECURITY_INTEGER expiry;
+            SecBuffer outputBuffer = new(MAX_TOKEN_SIZE);
+            SecBufferDesc output = new(outputBuffer);
 
-            uint result = InitializeSecurityContext(ref credentialsHandle, IntPtr.Zero, null, ISC_REQ_CONFIDENTIALITY | ISC_REQ_INTEGRITY, 0, SECURITY_NATIVE_DREP, IntPtr.Zero, 0, ref clientContext, ref output, out contextAttributes, out expiry);
+            uint result = InitializeSecurityContext(ref credentialsHandle, IntPtr.Zero, null, ISC_REQ_CONFIDENTIALITY | ISC_REQ_INTEGRITY, 0, SECURITY_NATIVE_DREP, IntPtr.Zero, 0, ref clientContext, ref output, out uint contextAttributes, out SECURITY_INTEGER expiry);
             if (result != SEC_E_OK && result != SEC_I_CONTINUE_NEEDED)
             {
                 if (result == SEC_E_INVALID_HANDLE)
@@ -90,15 +86,13 @@ namespace SMBLibrary.Win32.Security
 
         public static byte[] GetType3Message(SecHandle clientContext, byte[] type2Message)
         {
-            SecHandle newContext = new SecHandle();
-            SecBuffer inputBuffer = new SecBuffer(type2Message);
-            SecBufferDesc input = new SecBufferDesc(inputBuffer);
-            SecBuffer outputBuffer = new SecBuffer(MAX_TOKEN_SIZE);
-            SecBufferDesc output = new SecBufferDesc(outputBuffer);
-            uint contextAttributes;
-            SECURITY_INTEGER expiry;
+            SecHandle newContext = new();
+            SecBuffer inputBuffer = new(type2Message);
+            SecBufferDesc input = new(inputBuffer);
+            SecBuffer outputBuffer = new(MAX_TOKEN_SIZE);
+            SecBufferDesc output = new(outputBuffer);
 
-            uint result = InitializeSecurityContext(IntPtr.Zero, ref clientContext, null, ISC_REQ_CONFIDENTIALITY | ISC_REQ_INTEGRITY, 0, SECURITY_NATIVE_DREP, ref input, 0, ref newContext, ref output, out contextAttributes, out expiry);
+            uint result = InitializeSecurityContext(IntPtr.Zero, ref clientContext, null, ISC_REQ_CONFIDENTIALITY | ISC_REQ_INTEGRITY, 0, SECURITY_NATIVE_DREP, ref input, 0, ref newContext, ref output, out uint contextAttributes, out SECURITY_INTEGER expiry);
             if (result != SEC_E_OK)
             {
                 if (result == SEC_E_INVALID_HANDLE)
@@ -129,15 +123,13 @@ namespace SMBLibrary.Win32.Security
         public static byte[] GetType2Message(byte[] type1MessageBytes, out SecHandle serverContext)
         {
             SecHandle credentialsHandle = AcquireNTLMCredentialsHandle();
-            SecBuffer inputBuffer = new SecBuffer(type1MessageBytes);
-            SecBufferDesc input = new SecBufferDesc(inputBuffer);
+            SecBuffer inputBuffer = new(type1MessageBytes);
+            SecBufferDesc input = new(inputBuffer);
             serverContext = new SecHandle();
-            SecBuffer outputBuffer = new SecBuffer(MAX_TOKEN_SIZE);
-            SecBufferDesc output = new SecBufferDesc(outputBuffer);
-            uint contextAttributes;
-            SECURITY_INTEGER timestamp;
+            SecBuffer outputBuffer = new(MAX_TOKEN_SIZE);
+            SecBufferDesc output = new(outputBuffer);
 
-            uint result = AcceptSecurityContext(ref credentialsHandle, IntPtr.Zero, ref input, ASC_REQ_INTEGRITY | ASC_REQ_CONFIDENTIALITY, SECURITY_NATIVE_DREP, ref serverContext, ref output, out contextAttributes, out timestamp);
+            uint result = AcceptSecurityContext(ref credentialsHandle, IntPtr.Zero, ref input, ASC_REQ_INTEGRITY | ASC_REQ_CONFIDENTIALITY, SECURITY_NATIVE_DREP, ref serverContext, ref output, out uint contextAttributes, out SECURITY_INTEGER timestamp);
             if (result != SEC_E_OK && result != SEC_I_CONTINUE_NEEDED)
             {
                 if (result == SEC_E_INVALID_HANDLE)
@@ -184,15 +176,13 @@ namespace SMBLibrary.Win32.Security
         /// </remarks>
         public static bool AuthenticateType3Message(SecHandle serverContext, byte[] type3MessageBytes)
         {
-            SecHandle newContext = new SecHandle();
-            SecBuffer inputBuffer = new SecBuffer(type3MessageBytes);
-            SecBufferDesc input = new SecBufferDesc(inputBuffer);
-            SecBuffer outputBuffer = new SecBuffer(MAX_TOKEN_SIZE);
-            SecBufferDesc output = new SecBufferDesc(outputBuffer);
-            uint contextAttributes;
-            SECURITY_INTEGER timestamp;
+            SecHandle newContext = new();
+            SecBuffer inputBuffer = new(type3MessageBytes);
+            SecBufferDesc input = new(inputBuffer);
+            SecBuffer outputBuffer = new(MAX_TOKEN_SIZE);
+            SecBufferDesc output = new(outputBuffer);
 
-            uint result = AcceptSecurityContext(IntPtr.Zero, ref serverContext, ref input, ASC_REQ_INTEGRITY | ASC_REQ_CONFIDENTIALITY, SECURITY_NATIVE_DREP, ref newContext, ref output, out contextAttributes, out timestamp);
+            uint result = AcceptSecurityContext(IntPtr.Zero, ref serverContext, ref input, ASC_REQ_INTEGRITY | ASC_REQ_CONFIDENTIALITY, SECURITY_NATIVE_DREP, ref newContext, ref output, out uint contextAttributes, out SECURITY_INTEGER timestamp);
 
             inputBuffer.Dispose();
             input.Dispose();

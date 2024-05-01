@@ -24,13 +24,11 @@ namespace SMBLibrary.Server.SMB2
                 return new ErrorResponse(request.CommandName, NTStatus.STATUS_FILE_CLOSED);
             }
 
-            if (!((FileSystemShare)share).HasReadAccess(session.SecurityContext, openFile.Path))
+            if (!share.HasAccess(session.SecurityContext, openFile.Path, System.IO.FileAccess.Read))
             {
                 state.LogToServer(Severity.Verbose, "Query Directory on '{0}{1}' failed. User '{2}' was denied access.", share.Name, openFile.Path, session.UserName);
                 return new ErrorResponse(request.CommandName, NTStatus.STATUS_ACCESS_DENIED);
             }
-
-            FileSystemShare fileSystemShare = (FileSystemShare)share;
 
             FileID fileID = request.FileId;
             OpenSearch openSearch = session.GetOpenSearch(fileID);
@@ -40,8 +38,7 @@ namespace SMBLibrary.Server.SMB2
                 {
                     session.RemoveOpenSearch(fileID);
                 }
-                List<QueryDirectoryFileInformation> entries;
-                NTStatus searchStatus = share.FileStore.QueryDirectory(out entries, openFile.Handle, request.FileName, request.FileInformationClass);
+                NTStatus searchStatus = share.FileStore.QueryDirectory(out List<QueryDirectoryFileInformation> entries, openFile.Handle, request.FileName, request.FileInformationClass);
                 if (searchStatus != NTStatus.STATUS_SUCCESS)
                 {
                     state.LogToServer(Severity.Verbose, "Query Directory on '{0}{1}', Searched for '{2}', NTStatus: {3}", share.Name, openFile.Path, request.FileName, searchStatus.ToString());
@@ -68,7 +65,7 @@ namespace SMBLibrary.Server.SMB2
                 return new ErrorResponse(request.CommandName, NTStatus.STATUS_NO_MORE_FILES);
             }
 
-            List<QueryDirectoryFileInformation> page = new List<QueryDirectoryFileInformation>();
+            List<QueryDirectoryFileInformation> page = [];
             int pageLength = 0;
             for (int index = openSearch.EnumerationLocation; index < openSearch.Entries.Count; index++)
             {
@@ -98,7 +95,7 @@ namespace SMBLibrary.Server.SMB2
                 }
             }
             
-            QueryDirectoryResponse response = new QueryDirectoryResponse();
+            QueryDirectoryResponse response = new();
             response.SetFileInformationList(page);
             return response;
         }

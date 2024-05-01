@@ -33,28 +33,21 @@ namespace SMBLibrary
 
         public static QueryDirectoryFileInformation ReadFileInformation(byte[] buffer, int offset, FileInformationClass fileInformationClass)
         {
-            switch (fileInformationClass)
+            return fileInformationClass switch
             {
-                case FileInformationClass.FileDirectoryInformation:
-                    return new FileDirectoryInformation(buffer, offset);
-                case FileInformationClass.FileFullDirectoryInformation:
-                    return new FileFullDirectoryInformation(buffer, offset);
-                case FileInformationClass.FileBothDirectoryInformation:
-                    return new FileBothDirectoryInformation(buffer, offset);
-                case FileInformationClass.FileNamesInformation:
-                    return new FileNamesInformation(buffer, offset);
-                case FileInformationClass.FileIdBothDirectoryInformation:
-                    return new FileIdBothDirectoryInformation(buffer, offset);
-                case FileInformationClass.FileIdFullDirectoryInformation:
-                    return new FileIdFullDirectoryInformation(buffer, offset);
-                default:
-                    throw new NotImplementedException(String.Format("File information class {0} is not supported.", (int)fileInformationClass));
-            }
+                FileInformationClass.FileDirectoryInformation => new FileDirectoryInformation(buffer, offset),
+                FileInformationClass.FileFullDirectoryInformation => new FileFullDirectoryInformation(buffer, offset),
+                FileInformationClass.FileBothDirectoryInformation => new FileBothDirectoryInformation(buffer, offset),
+                FileInformationClass.FileNamesInformation => new FileNamesInformation(buffer, offset),
+                FileInformationClass.FileIdBothDirectoryInformation => new FileIdBothDirectoryInformation(buffer, offset),
+                FileInformationClass.FileIdFullDirectoryInformation => new FileIdFullDirectoryInformation(buffer, offset),
+                _ => throw new NotImplementedException(String.Format("File information class {0} is not supported.", (int)fileInformationClass)),
+            };
         }
 
         public static List<QueryDirectoryFileInformation> ReadFileInformationList(byte[] buffer, int offset, FileInformationClass fileInformationClass)
         {
-            List<QueryDirectoryFileInformation> result = new List<QueryDirectoryFileInformation>();
+            List<QueryDirectoryFileInformation> result = [];
             QueryDirectoryFileInformation entry;
             do
             {

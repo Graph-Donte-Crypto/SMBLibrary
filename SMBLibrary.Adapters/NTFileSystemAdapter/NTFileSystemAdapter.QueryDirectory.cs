@@ -78,8 +78,7 @@ namespace SMBLibrary.Adapters
                         throw;
                     }
                 }
-                entries = new List<FileSystemEntry>();
-                entries.Add(entry);
+                entries = [entry];
             }
 
             try
@@ -101,7 +100,7 @@ namespace SMBLibrary.Adapters
                 return entries;
             }
 
-            List<FileSystemEntry> result = new List<FileSystemEntry>();
+            List<FileSystemEntry> result = [];
             foreach (FileSystemEntry entry in entries)
             {
                 if (IsFileNameInExpression(entry.Name, expression))
@@ -173,7 +172,7 @@ namespace SMBLibrary.Adapters
 
         private static List<QueryDirectoryFileInformation> FromFileSystemEntries(List<FileSystemEntry> entries, FileInformationClass informationClass)
         {
-            List<QueryDirectoryFileInformation> result = new List<QueryDirectoryFileInformation>();
+            List<QueryDirectoryFileInformation> result = [];
             foreach (FileSystemEntry entry in entries)
             {
                 QueryDirectoryFileInformation information = FromFileSystemEntry(entry, informationClass);

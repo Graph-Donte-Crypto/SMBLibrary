@@ -30,7 +30,7 @@ namespace SMBLibrary.Server.SMB2
         // Special case - SMB2 client initially connecting using SMB1
         internal static SMB2Command GetNegotiateResponse(List<string> smb2Dialects, GSSProvider securityProvider, ConnectionState state, SMBTransportType transportType, Guid serverGuid, DateTime serverStartTime)
         {
-            NegotiateResponse response = new NegotiateResponse();
+            NegotiateResponse response = new();
             response.Header.Credits = 1;
 
             if (smb2Dialects.Contains(SMB2xxxDialect))
@@ -75,7 +75,7 @@ namespace SMBLibrary.Server.SMB2
 
         internal static SMB2Command GetNegotiateResponse(NegotiateRequest request, GSSProvider securityProvider, ConnectionState state, SMBTransportType transportType, Guid serverGuid, DateTime serverStartTime, bool enableSMB3)
         {
-            NegotiateResponse response = new NegotiateResponse();
+            NegotiateResponse response = new();
             if (enableSMB3 && request.Dialects.Contains(SMB2Dialect.SMB300))
             {
                 state.Dialect = SMBDialect.SMB300;
@@ -125,17 +125,17 @@ namespace SMBLibrary.Server.SMB2
 
         internal static List<string> FindSMB2Dialects(SMBLibrary.SMB1.SMB1Message message)
         {
-            if (message.Commands.Count > 0 && message.Commands[0] is SMBLibrary.SMB1.NegotiateRequest)
+            if (message.Commands.Count > 0 && message.Commands[0] is SMBLibrary.SMB1.NegotiateRequest negotiateRequest)
             {
-                SMBLibrary.SMB1.NegotiateRequest request = (SMBLibrary.SMB1.NegotiateRequest)message.Commands[0];
+                SMBLibrary.SMB1.NegotiateRequest request = negotiateRequest;
                 return FindSMB2Dialects(request);
             }
-            return new List<string>();
+            return [];
         }
 
         internal static List<string> FindSMB2Dialects(SMBLibrary.SMB1.NegotiateRequest request)
         {
-            List<string> result = new List<string>();
+            List<string> result = [];
             if (request.Dialects.Contains(SMB2002Dialect))
             {
                 result.Add(SMB2002Dialect);

@@ -29,23 +29,16 @@ namespace SMBLibrary.SMB1
 
         public static FindInformation ReadEntry(byte[] buffer, int offset, FindInformationLevel informationLevel, bool isUnicode)
         {
-            switch (informationLevel)
+            return informationLevel switch
             {
-                case FindInformationLevel.SMB_FIND_FILE_DIRECTORY_INFO:
-                    return new FindFileDirectoryInfo(buffer, offset, isUnicode);
-                case FindInformationLevel.SMB_FIND_FILE_FULL_DIRECTORY_INFO:
-                    return new FindFileFullDirectoryInfo(buffer, offset, isUnicode);
-                case FindInformationLevel.SMB_FIND_FILE_NAMES_INFO:
-                    return new FindFileNamesInfo(buffer, offset, isUnicode);
-                case FindInformationLevel.SMB_FIND_FILE_BOTH_DIRECTORY_INFO:
-                    return new FindFileBothDirectoryInfo(buffer, offset, isUnicode);
-                case FindInformationLevel.SMB_FIND_FILE_ID_FULL_DIRECTORY_INFO:
-                    return new FindFileIDFullDirectoryInfo(buffer, offset, isUnicode);
-                case FindInformationLevel.SMB_FIND_FILE_ID_BOTH_DIRECTORY_INFO:
-                    return new FindFileIDBothDirectoryInfo(buffer, offset, isUnicode);
-                default:
-                    throw new UnsupportedInformationLevelException();
-            }
+                FindInformationLevel.SMB_FIND_FILE_DIRECTORY_INFO => new FindFileDirectoryInfo(buffer, offset, isUnicode),
+                FindInformationLevel.SMB_FIND_FILE_FULL_DIRECTORY_INFO => new FindFileFullDirectoryInfo(buffer, offset, isUnicode),
+                FindInformationLevel.SMB_FIND_FILE_NAMES_INFO => new FindFileNamesInfo(buffer, offset, isUnicode),
+                FindInformationLevel.SMB_FIND_FILE_BOTH_DIRECTORY_INFO => new FindFileBothDirectoryInfo(buffer, offset, isUnicode),
+                FindInformationLevel.SMB_FIND_FILE_ID_FULL_DIRECTORY_INFO => new FindFileIDFullDirectoryInfo(buffer, offset, isUnicode),
+                FindInformationLevel.SMB_FIND_FILE_ID_BOTH_DIRECTORY_INFO => new FindFileIDBothDirectoryInfo(buffer, offset, isUnicode),
+                _ => throw new UnsupportedInformationLevelException(),
+            };
         }
     }
 }

@@ -151,13 +151,15 @@ namespace Utilities
 
         private static byte[] AesEncrypt(byte[] key, byte[] iv, byte[] data, CipherMode cipherMode)
         {
-            using (MemoryStream ms = new MemoryStream())
+            using (MemoryStream ms = new())
             {
-                RijndaelManaged aes = new RijndaelManaged();
-                aes.Mode = cipherMode;
-                aes.Padding = PaddingMode.None;
+                RijndaelManaged aes = new()
+                {
+                    Mode = cipherMode,
+                    Padding = PaddingMode.None
+                };
 
-                using (CryptoStream cs = new CryptoStream(ms, aes.CreateEncryptor(key, iv), CryptoStreamMode.Write))
+                using (CryptoStream cs = new(ms, aes.CreateEncryptor(key, iv), CryptoStreamMode.Write))
                 {
                     cs.Write(data, 0, data.Length);
                     cs.FlushFinalBlock();

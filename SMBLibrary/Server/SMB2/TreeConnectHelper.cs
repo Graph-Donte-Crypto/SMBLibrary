@@ -17,7 +17,7 @@ namespace SMBLibrary.Server.SMB2
         internal static SMB2Command GetTreeConnectResponse(TreeConnectRequest request, SMB2ConnectionState state, NamedPipeShare services, SMBShareCollection shares)
         {
             SMB2Session session = state.GetSession(request.Header.SessionID);
-            TreeConnectResponse response = new TreeConnectResponse();
+            TreeConnectResponse response = new();
             string shareName = ServerPathUtils.GetShareName(request.Path);
             ISMBShare share;
             ShareType shareType;
@@ -37,8 +37,8 @@ namespace SMBLibrary.Server.SMB2
                 }
 
                 shareType = ShareType.Disk;
-                shareFlags = GetShareCachingFlags(((FileSystemShare)share).CachingPolicy);
-                if (!((FileSystemShare)share).HasReadAccess(session.SecurityContext, @"\"))
+                shareFlags = GetShareCachingFlags(share.CachingPolicy);
+                if (!share.HasAccess(session.SecurityContext, @"\", System.IO.FileAccess.Read))
                 {
                     state.LogToServer(Severity.Verbose, "Tree Connect to '{0}' failed. User '{1}' was denied access.", share.Name, session.UserName);
                     return new ErrorResponse(request.CommandName, NTStatus.STATUS_ACCESS_DENIED);
@@ -64,17 +64,13 @@ namespace SMBLibrary.Server.SMB2
 
         private static ShareFlags GetShareCachingFlags(CachingPolicy cachingPolicy)
         {
-            switch (cachingPolicy)
+            return cachingPolicy switch
             {
-                case CachingPolicy.ManualCaching:
-                    return ShareFlags.ManualCaching;
-                case CachingPolicy.AutoCaching:
-                    return ShareFlags.AutoCaching;
-                case CachingPolicy.VideoCaching:
-                    return ShareFlags.VdoCaching;
-                default:
-                    return ShareFlags.NoCaching;
-            }
+                CachingPolicy.ManualCaching => ShareFlags.ManualCaching,
+                CachingPolicy.AutoCaching => ShareFlags.AutoCaching,
+                CachingPolicy.VideoCaching => ShareFlags.VdoCaching,
+                _ => ShareFlags.NoCaching,
+            };
         }
 
         internal static SMB2Command GetTreeDisconnectResponse(TreeDisconnectRequest request, ISMBShare share, SMB2ConnectionState state)

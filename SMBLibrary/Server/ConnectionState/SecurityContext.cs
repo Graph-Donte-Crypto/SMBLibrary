@@ -13,43 +13,19 @@ namespace SMBLibrary
 {
     public class SecurityContext
     {
-        private string m_userName;
-        private string m_machineName;
-        private IPEndPoint m_clientEndPoint;
+        public string UserName { get; private set; }
+        public string MachineName { get; private set; }
+        public IPEndPoint ClientEndPoint { get; private set; }
         public GSSContext AuthenticationContext;
         public object AccessToken;
 
         public SecurityContext(string userName, string machineName, IPEndPoint clientEndPoint, GSSContext authenticationContext, object accessToken)
         {
-            m_userName = userName;
-            m_machineName = machineName;
-            m_clientEndPoint = clientEndPoint;
+            UserName = userName;
+            MachineName = machineName;
+            ClientEndPoint = clientEndPoint;
             AuthenticationContext = authenticationContext;
             AccessToken = accessToken;
-        }
-
-        public string UserName
-        {
-            get
-            {
-                return m_userName;
-            }
-        }
-
-        public string MachineName
-        {
-            get
-            {
-                return m_machineName;
-            }
-        }
-
-        public IPEndPoint ClientEndPoint
-        {
-            get
-            {
-                return m_clientEndPoint;
-            }
         }
     }
 }

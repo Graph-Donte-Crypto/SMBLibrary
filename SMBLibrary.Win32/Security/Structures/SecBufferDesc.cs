@@ -19,7 +19,7 @@ namespace SMBLibrary.Win32.Security
         public uint cBuffers;    // Indicates the number of SecBuffer structures in the pBuffers array.
         public IntPtr pBuffers; // Pointer to an array of SecBuffer structures.
 
-        public SecBufferDesc(SecBuffer buffer) : this(new SecBuffer[] { buffer })
+        public SecBufferDesc(SecBuffer buffer) : this([buffer])
         {
         }
 

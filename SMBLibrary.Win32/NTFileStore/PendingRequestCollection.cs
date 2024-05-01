@@ -12,22 +12,20 @@ namespace SMBLibrary.Win32
 {
     internal class PendingRequestCollection
     {
-        private Dictionary<IntPtr, List<PendingRequest>> m_handleToNotifyChangeRequests = new Dictionary<IntPtr, List<PendingRequest>>();
+        private readonly Dictionary<IntPtr, List<PendingRequest>> m_handleToNotifyChangeRequests = [];
 
         public void Add(PendingRequest request)
         {
             lock (m_handleToNotifyChangeRequests)
             {
-                List<PendingRequest> pendingRequests;
-                bool containsKey = m_handleToNotifyChangeRequests.TryGetValue(request.FileHandle, out pendingRequests);
+                bool containsKey = m_handleToNotifyChangeRequests.TryGetValue(request.FileHandle, out List<PendingRequest> pendingRequests);
                 if (containsKey)
                 {
                     pendingRequests.Add(request);
                 }
                 else
                 {
-                    pendingRequests = new List<PendingRequest>();
-                    pendingRequests.Add(request);
+                    pendingRequests = [request];
                     m_handleToNotifyChangeRequests.Add(request.FileHandle, pendingRequests);
                 }
             }
@@ -37,8 +35,7 @@ namespace SMBLibrary.Win32
         {
             lock (m_handleToNotifyChangeRequests)
             {
-                List<PendingRequest> pendingRequests;
-                bool containsKey = m_handleToNotifyChangeRequests.TryGetValue(handle, out pendingRequests);
+                bool containsKey = m_handleToNotifyChangeRequests.TryGetValue(handle, out List<PendingRequest> pendingRequests);
                 if (containsKey)
                 {
                     for (int index = 0; index < pendingRequests.Count; index++)
@@ -60,13 +57,12 @@ namespace SMBLibrary.Win32
 
         public List<PendingRequest> GetRequestsByHandle(IntPtr handle)
         {
-            List<PendingRequest> pendingRequests;
-            bool containsKey = m_handleToNotifyChangeRequests.TryGetValue((IntPtr)handle, out pendingRequests);
+            bool containsKey = m_handleToNotifyChangeRequests.TryGetValue(handle, out List<PendingRequest> pendingRequests);
             if (containsKey)
             {
                 return new List<PendingRequest>(pendingRequests);
             }
-            return new List<PendingRequest>();
+            return [];
         }
     }
 }

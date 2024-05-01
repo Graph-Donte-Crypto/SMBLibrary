@@ -11,7 +11,6 @@ using System.Drawing;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
-using System.Windows.Forms;
 using SMBLibrary;
 using SMBLibrary.Authentication.GSSAPI;
 using SMBLibrary.Authentication.NTLM;
@@ -22,46 +21,36 @@ using Utilities;
 
 namespace SMBServer
 {
-    public partial class ServerUI : Form
+    public partial class ServerUI
     {
-        private SMBLibrary.Server.SMBServer m_server;
-        private SMBLibrary.Server.NameServer m_nameServer;
-        private LogWriter m_logWriter;
+        private SMBLibrary.Server.SMBServer Server;
+        private SMBLibrary.Server.NameServer NameServer;
+        private LogWriter LogWriter;
 
         public ServerUI()
         {
             InitializeComponent();
         }
 
-        private void ServerUI_Load(object sender, EventArgs e)
+        public static KeyValuePairList<string, IPAddress>  GetIPAddresses()
         {
             List<IPAddress> localIPs = NetworkInterfaceHelper.GetHostIPAddresses();
-            KeyValuePairList<string, IPAddress> list = new KeyValuePairList<string, IPAddress>();
-            list.Add("Any", IPAddress.Any);
+            KeyValuePairList<string, IPAddress> list = new()
+            {
+                { "Any", IPAddress.Any }
+            };
             foreach (IPAddress address in localIPs)
             {
                 list.Add(address.ToString(), address);
             }
-            comboIPAddress.DataSource = list;
-            comboIPAddress.DisplayMember = "Key";
-            comboIPAddress.ValueMember = "Value";
+            return list;
         }
 
-        private void btnStart_Click(object sender, EventArgs e)
-        {
-            IPAddress serverAddress = (IPAddress)comboIPAddress.SelectedValue;
-            SMBTransportType transportType;
-            if (rbtNetBiosOverTCP.Checked)
-            {
-                transportType = SMBTransportType.NetBiosOverTCP;
-            }
-            else
-            {
-                transportType = SMBTransportType.DirectTCPTransport;
-            }
-
+        public void Start(IPAddress iPAddress, SMBTransportType transportType, bool useIntegratedWindowsSecurity) {
+            IPAddress serverAddress = iPAddress;
+            
             NTLMAuthenticationProviderBase authenticationMechanism;
-            if (chkIntegratedWindowsAuthentication.Checked)
+            if (useIntegratedWindowsSecurity)
             {
                 authenticationMechanism = new IntegratedNTLMAuthenticationProvider();
             }
@@ -74,7 +63,7 @@ namespace SMBServer
                 }
                 catch
                 {
-                    MessageBox.Show("Cannot read " + SettingsHelper.SettingsFileName, "Error");
+                    Console.WriteLine("Cannot read " + SettingsHelper.SettingsFileName);
                     return;
                 }
 
@@ -88,70 +77,50 @@ namespace SMBServer
             }
             catch (Exception)
             {
-                MessageBox.Show("Cannot read " + SettingsHelper.SettingsFileName, "Error");
+                Console.WriteLine("Cannot read " + SettingsHelper.SettingsFileName);
                 return;
             }
 
-            SMBShareCollection shares = new SMBShareCollection();
+            SMBShareCollection shares = [];
             foreach (ShareSettings shareSettings in sharesSettings)
             {
                 FileSystemShare share = InitializeShare(shareSettings);
                 shares.Add(share);
             }
 
-            GSSProvider securityProvider = new GSSProvider(authenticationMechanism);
-            m_server = new SMBLibrary.Server.SMBServer(shares, securityProvider);
-            m_logWriter = new LogWriter();
+            GSSProvider securityProvider = new(authenticationMechanism);
+            Server = new SMBLibrary.Server.SMBServer(shares, securityProvider);
+            LogWriter = new LogWriter();
             // The provided logging mechanism will synchronously write to the disk during server activity.
             // To maximize server performance, you can disable logging by commenting out the following line.
-            m_server.LogEntryAdded += new EventHandler<LogEntry>(m_logWriter.OnLogEntryAdded);
+            Server.LogEntryAdded += new EventHandler<LogEntry>(LogWriter.OnLogEntryAdded);
 
             try
             {
-                m_server.Start(serverAddress, transportType, chkSMB1.Checked, chkSMB2.Checked);
+                Server.Start(serverAddress, transportType, chkSMB1.Checked, chkSMB2.Checked);
                 if (transportType == SMBTransportType.NetBiosOverTCP)
                 {
                     if (serverAddress.AddressFamily == AddressFamily.InterNetwork && !IPAddress.Equals(serverAddress, IPAddress.Any))
                     {
                         IPAddress subnetMask = NetworkInterfaceHelper.GetSubnetMask(serverAddress);
-                        m_nameServer = new NameServer(serverAddress, subnetMask);
-                        m_nameServer.Start();
+                        NameServer = new NameServer(serverAddress, subnetMask);
+                        NameServer.Start();
                     }
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Error");
+                Console.WriteLine(ex.Message);
                 return;
             }
-
-            btnStart.Enabled = false;
-            btnStop.Enabled = true;
-            comboIPAddress.Enabled = false;
-            rbtDirectTCPTransport.Enabled = false;
-            rbtNetBiosOverTCP.Enabled = false;
-            chkSMB1.Enabled = false;
-            chkSMB2.Enabled = false;
-            chkIntegratedWindowsAuthentication.Enabled = false;
         }
 
-        private void btnStop_Click(object sender, EventArgs e)
+        public void Stop()
         {
-            m_server.Stop();
-            m_logWriter.CloseLogFile();
-            btnStart.Enabled = true;
-            btnStop.Enabled = false;
-            comboIPAddress.Enabled = true;
-            rbtDirectTCPTransport.Enabled = true;
-            rbtNetBiosOverTCP.Enabled = true;
-            chkSMB1.Enabled = true;
-            chkSMB2.Enabled = true;
-            chkIntegratedWindowsAuthentication.Enabled = true;
+            Server.Stop();
+            LogWriter.CloseLogFile();
 
-            if (m_nameServer != null)
-            {
-                m_nameServer.Stop();
-            }
+            NameServer?.Stop();
         }
 
         private void chkSMB1_CheckedChanged(object sender, EventArgs e)
@@ -176,11 +145,11 @@ namespace SMBServer
             string sharePath = shareSettings.SharePath;
             List<string> readAccess = shareSettings.ReadAccess;
             List<string> writeAccess = shareSettings.WriteAccess;
-            FileSystemShare share = new FileSystemShare(shareName, new NTDirectoryFileSystem(sharePath));
-            share.AccessRequested += delegate(object sender, AccessRequestArgs args)
+            FileSystemShare share = new(shareName, new NTDirectoryFileSystem(sharePath));
+            share.AccessRequested += (object sender, AccessRequestArgs args) =>
             {
-                bool hasReadAccess = Contains(readAccess, "Users") || Contains(readAccess, args.UserName);
-                bool hasWriteAccess = Contains(writeAccess, "Users") || Contains(writeAccess, args.UserName);
+                bool hasReadAccess = readAccess.Contains("Users") || readAccess.Contains(args.UserName);
+                bool hasWriteAccess = readAccess.Contains("Users") || writeAccess.Contains(args.UserName);
                 if (args.RequestedAccess == FileAccess.Read)
                 {
                     args.Allow = hasReadAccess;

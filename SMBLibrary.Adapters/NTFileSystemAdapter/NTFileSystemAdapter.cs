@@ -16,7 +16,8 @@ namespace SMBLibrary.Adapters
         private const int BytesPerSector = 512;
         private const int ClusterSize = 4096;
 
-        private IFileSystem m_fileSystem;
+        private readonly IFileSystem m_fileSystem;
+        private static readonly char[] trimChars = ['|'];
 
         public event EventHandler<LogEntry> LogEntryAdded;
 
@@ -44,7 +45,7 @@ namespace SMBLibrary.Adapters
             }
 
             // Windows will try to access named streams (alternate data streams) regardless of the FILE_NAMED_STREAMS flag, we need to prevent this behaviour.
-            if (!m_fileSystem.SupportsNamedStreams && path.Contains(":"))
+            if (!m_fileSystem.SupportsNamedStreams && path.Contains(':'))
             {
                 // Windows Server 2003 will return STATUS_OBJECT_NAME_NOT_FOUND
                 return NTStatus.STATUS_NO_SUCH_FILE;
@@ -452,10 +453,7 @@ namespace SMBLibrary.Adapters
         public NTStatus FlushFileBuffers(object handle)
         {
             FileHandle fileHandle = (FileHandle)handle;
-            if (fileHandle.Stream != null)
-            {
-                fileHandle.Stream.Flush();
-            }
+            fileHandle.Stream?.Flush();
             return NTStatus.STATUS_SUCCESS;
         }
 
@@ -500,11 +498,7 @@ namespace SMBLibrary.Adapters
         public void Log(Severity severity, string message)
         {
             // To be thread-safe we must capture the delegate reference first
-            EventHandler<LogEntry> handler = LogEntryAdded;
-            if (handler != null)
-            {
-                handler(this, new LogEntry(DateTime.Now, severity, "NT FileSystem Adapter", message));
-            }
+            LogEntryAdded?.Invoke(this, new LogEntry(DateTime.Now, severity, "NT FileSystem Adapter", message));
         }
 
         public void Log(Severity severity, string message, params object[] args)
@@ -523,9 +517,9 @@ namespace SMBLibrary.Adapters
             {
                 return NTStatus.STATUS_OBJECT_PATH_NOT_FOUND;
             }
-            else if (exception is IOException)
+            else if (exception is IOException iOException)
             {
-                ushort errorCode = IOExceptionHelper.GetWin32ErrorCode((IOException)exception);
+                ushort errorCode = IOExceptionHelper.GetWin32ErrorCode(iOException);
                 if (errorCode == (ushort)Win32Error.ERROR_SHARING_VIOLATION)
                 {
                     return NTStatus.STATUS_SHARING_VIOLATION;
@@ -621,7 +615,7 @@ namespace SMBLibrary.Adapters
             {
                 result += options.ToString().Replace(", ", "|");
             }
-            result = result.TrimEnd(new char[] { '|' });
+            result = result.TrimEnd(trimChars);
             return result;
         }
 

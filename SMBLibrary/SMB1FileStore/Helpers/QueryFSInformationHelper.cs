@@ -16,19 +16,14 @@ namespace SMBLibrary.SMB1
         /// <exception cref="SMBLibrary.UnsupportedInformationLevelException"></exception>
         public static FileSystemInformationClass ToFileSystemInformationClass(QueryFSInformationLevel informationLevel)
         {
-            switch (informationLevel)
+            return informationLevel switch
             {
-                case QueryFSInformationLevel.SMB_QUERY_FS_VOLUME_INFO:
-                    return FileSystemInformationClass.FileFsVolumeInformation;
-                case QueryFSInformationLevel.SMB_QUERY_FS_SIZE_INFO:
-                    return FileSystemInformationClass.FileFsSizeInformation;
-                case QueryFSInformationLevel.SMB_QUERY_FS_DEVICE_INFO:
-                    return FileSystemInformationClass.FileFsDeviceInformation;
-                case QueryFSInformationLevel.SMB_QUERY_FS_ATTRIBUTE_INFO:
-                    return FileSystemInformationClass.FileFsAttributeInformation;
-                default:
-                    throw new UnsupportedInformationLevelException();
-            }
+                QueryFSInformationLevel.SMB_QUERY_FS_VOLUME_INFO => FileSystemInformationClass.FileFsVolumeInformation,
+                QueryFSInformationLevel.SMB_QUERY_FS_SIZE_INFO => FileSystemInformationClass.FileFsSizeInformation,
+                QueryFSInformationLevel.SMB_QUERY_FS_DEVICE_INFO => FileSystemInformationClass.FileFsDeviceInformation,
+                QueryFSInformationLevel.SMB_QUERY_FS_ATTRIBUTE_INFO => FileSystemInformationClass.FileFsAttributeInformation,
+                _ => throw new UnsupportedInformationLevelException(),
+            };
         }
 
         public static QueryFSInformation FromFileSystemInformation(FileSystemInformation fsInfo)

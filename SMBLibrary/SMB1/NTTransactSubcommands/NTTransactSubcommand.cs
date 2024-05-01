@@ -19,17 +19,17 @@ namespace SMBLibrary.SMB1
 
         public virtual byte[] GetSetup()
         {
-            return new byte[0];
+            return [];
         }
 
         public virtual byte[] GetParameters(bool isUnicode)
         {
-            return new byte[0];
+            return [];
         }
 
         public virtual byte[] GetData()
         {
-            return new byte[0];
+            return [];
         }
 
         public abstract NTTransactSubcommandName SubcommandName
@@ -39,20 +39,15 @@ namespace SMBLibrary.SMB1
 
         public static NTTransactSubcommand GetSubcommandRequest(NTTransactSubcommandName subcommandName, byte[] setup, byte[] parameters, byte[] data, bool isUnicode)
         {
-            switch (subcommandName)
+            return subcommandName switch
             {
-                case NTTransactSubcommandName.NT_TRANSACT_CREATE:
-                    return new NTTransactCreateRequest(parameters, data, isUnicode);
-                case NTTransactSubcommandName.NT_TRANSACT_IOCTL:
-                    return new NTTransactIOCTLRequest(setup, data);
-                case NTTransactSubcommandName.NT_TRANSACT_SET_SECURITY_DESC:
-                    return new NTTransactSetSecurityDescriptorRequest(parameters, data);
-                case NTTransactSubcommandName.NT_TRANSACT_NOTIFY_CHANGE:
-                    return new NTTransactNotifyChangeRequest(setup);
-                case NTTransactSubcommandName.NT_TRANSACT_QUERY_SECURITY_DESC:
-                    return new NTTransactQuerySecurityDescriptorRequest(parameters);
-            }
-            throw new InvalidDataException();
+                NTTransactSubcommandName.NT_TRANSACT_CREATE => new NTTransactCreateRequest(parameters, data, isUnicode),
+                NTTransactSubcommandName.NT_TRANSACT_IOCTL => new NTTransactIOCTLRequest(setup, data),
+                NTTransactSubcommandName.NT_TRANSACT_SET_SECURITY_DESC => new NTTransactSetSecurityDescriptorRequest(parameters, data),
+                NTTransactSubcommandName.NT_TRANSACT_NOTIFY_CHANGE => new NTTransactNotifyChangeRequest(setup),
+                NTTransactSubcommandName.NT_TRANSACT_QUERY_SECURITY_DESC => new NTTransactQuerySecurityDescriptorRequest(parameters),
+                _ => throw new InvalidDataException(),
+            };
         }
     }
 }

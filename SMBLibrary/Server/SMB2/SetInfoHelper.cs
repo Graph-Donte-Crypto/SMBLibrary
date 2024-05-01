@@ -27,24 +27,18 @@ namespace SMBLibrary.Server.SMB2
                     return new ErrorResponse(request.CommandName, NTStatus.STATUS_FILE_CLOSED);
                 }
 
-                if (share is FileSystemShare)
+                if (!share.HasAccess(session.SecurityContext, openFile.Path, System.IO.FileAccess.Write))
                 {
-                    if (!((FileSystemShare)share).HasWriteAccess(session.SecurityContext, openFile.Path))
-                    {
-                        state.LogToServer(Severity.Verbose, "SetFileInformation on '{0}{1}' failed. User '{2}' was denied access.", share.Name, openFile.Path, session.UserName);
-                        return new ErrorResponse(request.CommandName, NTStatus.STATUS_ACCESS_DENIED);
-                    }
+                    state.LogToServer(Severity.Verbose, "SetFileInformation on '{0}{1}' failed. User '{2}' was denied access.", share.Name, openFile.Path, session.UserName);
+                    return new ErrorResponse(request.CommandName, NTStatus.STATUS_ACCESS_DENIED);
                 }
             }
             else if (request.InfoType == InfoType.FileSystem)
             {
-                if (share is FileSystemShare)
+                if (!share.HasAccess(session.SecurityContext, @"\", System.IO.FileAccess.Write))
                 {
-                    if (!((FileSystemShare)share).HasWriteAccess(session.SecurityContext, @"\"))
-                    {
-                        state.LogToServer(Severity.Verbose, "SetFileSystemInformation on '{0}' failed. User '{1}' was denied access.", share.Name, session.UserName);
-                        return new ErrorResponse(request.CommandName, NTStatus.STATUS_ACCESS_DENIED);
-                    }
+                    state.LogToServer(Severity.Verbose, "SetFileSystemInformation on '{0}' failed. User '{1}' was denied access.", share.Name, session.UserName);
+                    return new ErrorResponse(request.CommandName, NTStatus.STATUS_ACCESS_DENIED);
                 }
             }
 
@@ -70,15 +64,15 @@ namespace SMBLibrary.Server.SMB2
                     state.LogToServer(Severity.Verbose, "SetFileInformation on '{0}{1}' failed. Information class: {2}, NTStatus: STATUS_INVALID_PARAMETER.", share.Name, openFile.Path, request.FileInformationClass);
                     return new ErrorResponse(request.CommandName, NTStatus.STATUS_INVALID_PARAMETER);
                 }
-
-                if ((share is FileSystemShare) && (information is FileRenameInformationType2))
+                //TODO: Optimize
+                if (information is FileRenameInformationType2 fileRenameInformationType2)
                 {
-                    string newFileName = ((FileRenameInformationType2)information).FileName;
-                    if (!newFileName.StartsWith(@"\"))
+                    string newFileName = fileRenameInformationType2.FileName;
+                    if (!newFileName.StartsWith('\\'))
                     {
                         newFileName = @"\" + newFileName;
                     }
-                    if (!((FileSystemShare)share).HasWriteAccess(session.SecurityContext, newFileName))
+                    if (!share.HasAccess(session.SecurityContext, newFileName, System.IO.FileAccess.Write))
                     {
                         state.LogToServer(Severity.Verbose, "SetFileInformation: Rename '{0}{1}' to '{0}{2}' failed. User '{3}' was denied access.", share.Name, openFile.Path, newFileName, session.UserName);
                         return new ErrorResponse(request.CommandName, NTStatus.STATUS_ACCESS_DENIED);
@@ -92,10 +86,10 @@ namespace SMBLibrary.Server.SMB2
                     return new ErrorResponse(request.CommandName, status);
                 }
 
-                if (information is FileRenameInformationType2)
+                if (information is FileRenameInformationType2 fileRenameInformationType20)
                 {
-                    string newFileName = ((FileRenameInformationType2)information).FileName;
-                    if (!newFileName.StartsWith(@"\"))
+                    string newFileName = fileRenameInformationType20.FileName;
+                    if (!newFileName.StartsWith('\\'))
                     {
                         newFileName = @"\" + newFileName;
                     }

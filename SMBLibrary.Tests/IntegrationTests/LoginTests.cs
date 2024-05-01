@@ -18,9 +18,9 @@ namespace SMBLibrary.Tests.IntegrationTests
         public void Initialize()
         {
             m_serverPort = 1000 + new Random().Next(50000);
-            SMBShareCollection shares = new SMBShareCollection();
+            SMBShareCollection shares = [];
             IGSSMechanism gssMechanism = new IndependentNTLMAuthenticationProvider((username) => "password");
-            GSSProvider gssProvider = new GSSProvider(gssMechanism);
+            GSSProvider gssProvider = new(gssMechanism);
             m_server = new SMBServer(shares, gssProvider);
             m_server.Start(IPAddress.Loopback, SMBTransportType.DirectTCPTransport, m_serverPort, false, true, false, null);
         }
@@ -35,7 +35,7 @@ namespace SMBLibrary.Tests.IntegrationTests
         public void When_ValidCredentialsProvided_LoginSucceed()
         {
             // Arrange
-            SMB2Client client = new SMB2Client();
+            SMB2Client client = new();
             client.Connect(IPAddress.Loopback, SMBTransportType.DirectTCPTransport, m_serverPort, 5000);
 
             // Act
@@ -49,7 +49,7 @@ namespace SMBLibrary.Tests.IntegrationTests
         public void When_ClientDisconnectAndReconnect_LoginSucceed()
         {
             // Arrange
-            SMB2Client client = new SMB2Client();
+            SMB2Client client = new();
             client.Connect(IPAddress.Loopback, SMBTransportType.DirectTCPTransport, m_serverPort, 5000);
 
             // Act
@@ -69,7 +69,7 @@ namespace SMBLibrary.Tests.IntegrationTests
         public void When_InvalidCredentialsProvided_LoginFails()
         {
             // Arrange
-            SMB2Client client = new SMB2Client();
+            SMB2Client client = new();
             client.Connect(IPAddress.Loopback, SMBTransportType.DirectTCPTransport, m_serverPort, 5000);
 
             // Act

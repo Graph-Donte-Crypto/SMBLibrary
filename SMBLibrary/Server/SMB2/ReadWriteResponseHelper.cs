@@ -24,24 +24,22 @@ namespace SMBLibrary.Server.SMB2
                 return new ErrorResponse(request.CommandName, NTStatus.STATUS_FILE_CLOSED);
             }
 
-            if (share is FileSystemShare)
+            if (!share.HasAccess(session.SecurityContext, openFile.Path, System.IO.FileAccess.Read))
             {
-                if (!((FileSystemShare)share).HasReadAccess(session.SecurityContext, openFile.Path))
-                {
-                    state.LogToServer(Severity.Verbose, "Read from '{0}{1}' failed. User '{2}' was denied access.", share.Name, openFile.Path, session.UserName);
-                    return new ErrorResponse(request.CommandName, NTStatus.STATUS_ACCESS_DENIED);
-                }
+                state.LogToServer(Severity.Verbose, "Read from '{0}{1}' failed. User '{2}' was denied access.", share.Name, openFile.Path, session.UserName);
+                return new ErrorResponse(request.CommandName, NTStatus.STATUS_ACCESS_DENIED);
             }
 
-            byte[] data;
-            NTStatus readStatus = share.FileStore.ReadFile(out data, openFile.Handle, (long)request.Offset, (int)request.ReadLength);
+            NTStatus readStatus = share.FileStore.ReadFile(out byte[] data, openFile.Handle, (long)request.Offset, (int)request.ReadLength);
             if (readStatus != NTStatus.STATUS_SUCCESS)
             {
                 state.LogToServer(Severity.Verbose, "Read from '{0}{1}' failed. NTStatus: {2}. (FileId: {3})", share.Name, openFile.Path, readStatus, request.FileId.Volatile);
                 return new ErrorResponse(request.CommandName, readStatus);
             }
-            ReadResponse response = new ReadResponse();
-            response.Data = data;
+            ReadResponse response = new()
+            {
+                Data = data
+            };
             return response;
         }
 
@@ -55,24 +53,22 @@ namespace SMBLibrary.Server.SMB2
                 return new ErrorResponse(request.CommandName, NTStatus.STATUS_FILE_CLOSED);
             }
 
-            if (share is FileSystemShare)
+            if (!share.HasAccess(session.SecurityContext, openFile.Path, System.IO.FileAccess.Write))
             {
-                if (!((FileSystemShare)share).HasWriteAccess(session.SecurityContext, openFile.Path))
-                {
-                    state.LogToServer(Severity.Verbose, "Write to '{0}{1}' failed. User '{2}' was denied access.", share.Name, openFile.Path, session.UserName);
-                    return new ErrorResponse(request.CommandName, NTStatus.STATUS_ACCESS_DENIED);
-                }
+                state.LogToServer(Severity.Verbose, "Write to '{0}{1}' failed. User '{2}' was denied access.", share.Name, openFile.Path, session.UserName);
+                return new ErrorResponse(request.CommandName, NTStatus.STATUS_ACCESS_DENIED);
             }
 
-            int numberOfBytesWritten;
-            NTStatus writeStatus = share.FileStore.WriteFile(out numberOfBytesWritten, openFile.Handle, (long)request.Offset, request.Data);
+            NTStatus writeStatus = share.FileStore.WriteFile(out int numberOfBytesWritten, openFile.Handle, (long)request.Offset, request.Data);
             if (writeStatus != NTStatus.STATUS_SUCCESS)
             {
                 state.LogToServer(Severity.Verbose, "Write to '{0}{1}' failed. NTStatus: {2}. (FileId: {3})", share.Name, openFile.Path, writeStatus, request.FileId.Volatile);
                 return new ErrorResponse(request.CommandName, writeStatus);
             }
-            WriteResponse response = new WriteResponse();
-            response.Count = (uint)numberOfBytesWritten;
+            WriteResponse response = new()
+            {
+                Count = (uint)numberOfBytesWritten
+            };
             return response;
         }
 

@@ -70,23 +70,16 @@ namespace SMBLibrary.RPC
         public static RPCPDU GetPDU(byte[] buffer, int offset)
         {
             PacketTypeName packetType = (PacketTypeName)ByteReader.ReadByte(buffer, 2);
-            switch (packetType)
+            return packetType switch
             {
-                case PacketTypeName.Request:
-                    return new RequestPDU(buffer, offset);
-                case PacketTypeName.Response:
-                    return new ResponsePDU(buffer, offset);
-                case PacketTypeName.Fault:
-                    return new FaultPDU(buffer, offset);
-                case PacketTypeName.Bind:
-                    return new BindPDU(buffer, offset);
-                case PacketTypeName.BindAck:
-                    return new BindAckPDU(buffer, offset);
-                case PacketTypeName.BindNak:
-                    return new BindNakPDU(buffer, offset);
-                default:
-                    throw new NotImplementedException();
-            }
+                PacketTypeName.Request => new RequestPDU(buffer, offset),
+                PacketTypeName.Response => new ResponsePDU(buffer, offset),
+                PacketTypeName.Fault => new FaultPDU(buffer, offset),
+                PacketTypeName.Bind => new BindPDU(buffer, offset),
+                PacketTypeName.BindAck => new BindAckPDU(buffer, offset),
+                PacketTypeName.BindNak => new BindNakPDU(buffer, offset),
+                _ => throw new NotImplementedException(),
+            };
         }
 
         public static ushort GetPDULength(byte[] buffer, int offset)

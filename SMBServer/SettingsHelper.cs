@@ -7,7 +7,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Windows.Forms;
 using System.Xml;
 
 namespace SMBServer
@@ -18,21 +17,21 @@ namespace SMBServer
 
         public static XmlDocument ReadXmlDocument(string path)
         {
-            XmlDocument doc = new XmlDocument();
+            XmlDocument doc = new();
             doc.Load(path);
             return doc;
         }
 
         public static XmlDocument ReadSettingsXML()
         {
-            string executableDirectory = Path.GetDirectoryName(Application.ExecutablePath) + "\\";
+            string executableDirectory = Path.GetDirectoryName(AppDomain.CurrentDomain.BaseDirectory) + "\\";
             XmlDocument document = ReadXmlDocument(executableDirectory + SettingsFileName);
             return document;
         }
 
         public static UserCollection ReadUserSettings()
         {
-            UserCollection users = new UserCollection();
+            UserCollection users = [];
             XmlDocument document = ReadSettingsXML();
             XmlNode usersNode = document.SelectSingleNode("Settings/Users");
 
@@ -47,7 +46,7 @@ namespace SMBServer
 
         public static List<ShareSettings> ReadSharesSettings()
         {
-            List<ShareSettings> shares = new List<ShareSettings>();
+            List<ShareSettings> shares = [];
             XmlDocument document = ReadSettingsXML();
             XmlNode sharesNode = document.SelectSingleNode("Settings/Shares");
 
@@ -60,7 +59,7 @@ namespace SMBServer
                 List<string> readAccess = ReadAccessList(readAccessNode);
                 XmlNode writeAccessNode = shareNode.SelectSingleNode("WriteAccess");
                 List<string> writeAccess = ReadAccessList(writeAccessNode);
-                ShareSettings share = new ShareSettings(shareName, sharePath, readAccess, writeAccess);
+                ShareSettings share = new(shareName, sharePath, readAccess, writeAccess);
                 shares.Add(share);
             }
             return shares;
@@ -68,7 +67,7 @@ namespace SMBServer
 
         private static List<string> ReadAccessList(XmlNode node)
         {
-            List<string> result = new List<string>();
+            List<string> result = [];
             if (node != null)
             {
                 string accounts = node.Attributes["Accounts"].Value;

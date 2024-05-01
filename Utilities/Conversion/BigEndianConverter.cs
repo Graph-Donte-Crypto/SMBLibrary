@@ -60,9 +60,7 @@ namespace Utilities
 
         public static byte[] GetBytes(ushort value)
         {
-            byte[] result = new byte[2];
-            result[0] = (byte)((value >> 8) & 0xFF);
-            result[1] = (byte)((value >> 0) & 0xFF);
+            byte[] result = [(byte)((value >> 8) & 0xFF), (byte)((value >> 0) & 0xFF)];
             return result;
         }
 
@@ -73,12 +71,13 @@ namespace Utilities
 
         public static byte[] GetBytes(uint value)
         {
-            byte[] result = new byte[4];
-            result[0] = (byte)((value >> 24) & 0xFF);
-            result[1] = (byte)((value >> 16) & 0xFF);
-            result[2] = (byte)((value >> 8) & 0xFF);
-            result[3] = (byte)((value >> 0) & 0xFF);
-
+            byte[] result =
+            [
+                (byte)((value >> 24) & 0xFF),
+                (byte)((value >> 16) & 0xFF),
+                (byte)((value >> 8) & 0xFF),
+                (byte)((value >> 0) & 0xFF),
+            ];
             return result;
         }
 

@@ -17,30 +17,23 @@ namespace SMBLibrary.Server
         // A pipe share, as defined by the SMB Protocol, MUST always have the name "IPC$".
         public const string NamedPipeShareName = "IPC$";
 
-        private NamedPipeStore m_store;
+        public NamedPipeStore NamedPipeStore { get; private set; }
 
         public NamedPipeShare(List<string> shareList)
         {
-            List<RemoteService> services = new List<RemoteService>();
-            services.Add(new ServerService(Environment.MachineName, shareList));
-            services.Add(new WorkstationService(Environment.MachineName, Environment.MachineName));
-            m_store = new NamedPipeStore(services);
+            List<RemoteService> services =
+            [
+                new ServerService(Environment.MachineName, shareList),
+                new WorkstationService(Environment.MachineName, Environment.MachineName),
+            ];
+            NamedPipeStore = new NamedPipeStore(services);
         }
 
-        public string Name
-        {
-            get
-            {
-                return NamedPipeShareName;
-            }
-        }
+        public string Name => NamedPipeShareName;
+        public INTFileStore FileStore => NamedPipeStore;
+        public CachingPolicy CachingPolicy => CachingPolicy.ManualCaching;
+        public bool IsFileSystemShare => false;
 
-        public INTFileStore FileStore
-        {
-            get
-            {
-                return m_store;
-            }
-        }
+        public bool HasAccess(SecurityContext securityContext, string path, FileAccess requestedAccess) => true;
     }
 }

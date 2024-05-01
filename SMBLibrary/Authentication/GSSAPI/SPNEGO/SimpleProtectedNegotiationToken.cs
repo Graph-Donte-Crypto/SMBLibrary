@@ -14,7 +14,7 @@ namespace SMBLibrary.Authentication.GSSAPI
     {
         public const byte ApplicationTag = 0x60;
 
-        public static readonly byte[] SPNEGOIdentifier = new byte[] { 0x2b, 0x06, 0x01, 0x05, 0x05, 0x02 };
+        public static readonly byte[] SPNEGOIdentifier = [0x2b, 0x06, 0x01, 0x05, 0x05, 0x02];
 
         public abstract byte[] GetBytes();
 

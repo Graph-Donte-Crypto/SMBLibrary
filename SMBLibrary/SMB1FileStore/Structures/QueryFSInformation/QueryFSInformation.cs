@@ -27,19 +27,14 @@ namespace SMBLibrary.SMB1
 
         public static QueryFSInformation GetQueryFSInformation(byte[] buffer, QueryFSInformationLevel informationLevel, bool isUnicode)
         {
-            switch (informationLevel)
+            return informationLevel switch
             {
-                case QueryFSInformationLevel.SMB_QUERY_FS_VOLUME_INFO:
-                    return new QueryFSVolumeInfo(buffer, 0);
-                case QueryFSInformationLevel.SMB_QUERY_FS_SIZE_INFO:
-                    return new QueryFSSizeInfo(buffer, 0);
-                case QueryFSInformationLevel.SMB_QUERY_FS_DEVICE_INFO:
-                    return new QueryFSDeviceInfo(buffer, 0);
-                case QueryFSInformationLevel.SMB_QUERY_FS_ATTRIBUTE_INFO:
-                    return new QueryFSAttibuteInfo(buffer, 0);
-                default:
-                    throw new UnsupportedInformationLevelException();
-            }
+                QueryFSInformationLevel.SMB_QUERY_FS_VOLUME_INFO => new QueryFSVolumeInfo(buffer, 0),
+                QueryFSInformationLevel.SMB_QUERY_FS_SIZE_INFO => new QueryFSSizeInfo(buffer, 0),
+                QueryFSInformationLevel.SMB_QUERY_FS_DEVICE_INFO => new QueryFSDeviceInfo(buffer, 0),
+                QueryFSInformationLevel.SMB_QUERY_FS_ATTRIBUTE_INFO => new QueryFSAttibuteInfo(buffer, 0),
+                _ => throw new UnsupportedInformationLevelException(),
+            };
         }
     }
 }

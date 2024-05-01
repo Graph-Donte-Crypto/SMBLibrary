@@ -5,19 +5,16 @@
  * either version 3 of the License, or (at your option) any later version.
  */
 using System;
+using System.IO;
 
 namespace SMBLibrary.Server
 {
     public interface ISMBShare
     {
-        string Name
-        {
-            get;
-        }
-
-        INTFileStore FileStore
-        {
-            get;
-        }
+        string Name { get; }
+        INTFileStore FileStore { get; }
+        CachingPolicy CachingPolicy { get; }
+        bool IsFileSystemShare { get; }
+        bool HasAccess(SecurityContext securityContext, string path, FileAccess requestedAccess);
     }
 }

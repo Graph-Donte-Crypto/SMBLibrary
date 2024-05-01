@@ -13,7 +13,7 @@ namespace Utilities
 {
     public class BlockingQueue<T>
     {
-        private Queue<T> m_queue = new Queue<T>();
+        private readonly Queue<T> m_queue = new();
         private int m_count = 0;
         private bool m_stopping;
 
@@ -60,7 +60,7 @@ namespace Utilities
                     Monitor.Wait(m_queue);
                     if (m_stopping)
                     {
-                        item = default(T);
+                        item = default;
                         return false;
                     }
                 }

@@ -28,8 +28,7 @@ namespace SMBLibrary.Win32
             if ((Environment.OSVersion.Version.Major == 5 && Environment.OSVersion.Version.Minor >= 1) ||
                 Environment.OSVersion.Version.Major >= 6)
             {
-                bool retVal;
-                if (!IsWow64Process(process.Handle, out retVal))
+                if (!IsWow64Process(process.Handle, out bool retVal))
                 {
                     return false;
                 }

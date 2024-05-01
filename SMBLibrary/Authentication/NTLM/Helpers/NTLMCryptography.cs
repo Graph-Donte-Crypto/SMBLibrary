@@ -30,7 +30,7 @@ namespace SMBLibrary.Authentication.NTLM
         public static byte[] ComputeNTLMv1ExtendedSessionSecurityResponse(byte[] serverChallenge, byte[] clientChallenge, string password)
         {
             byte[] passwordHash = NTOWFv1(password);
-            byte[] challengeHash = MD5.Create().ComputeHash(ByteUtils.Concatenate(serverChallenge, clientChallenge));
+            byte[] challengeHash = MD5.HashData(ByteUtils.Concatenate(serverChallenge, clientChallenge));
             byte[] challengeHashShort = new byte[8];
             Array.Copy(challengeHash, 0, challengeHashShort, 0, 8);
             return DesLongEncrypt(passwordHash, challengeHashShort);
@@ -40,7 +40,7 @@ namespace SMBLibrary.Authentication.NTLM
         {
             byte[] key = LMOWFv2(password, user, domain);
             byte[] bytes = ByteUtils.Concatenate(serverChallenge, clientChallenge);
-            HMACMD5 hmac = new HMACMD5(key);
+            HMACMD5 hmac = new(key);
             byte[] hash = hmac.ComputeHash(bytes, 0, bytes.Length);
 
             return ByteUtils.Concatenate(hash, clientChallenge);
@@ -55,7 +55,7 @@ namespace SMBLibrary.Authentication.NTLM
             byte[] key = NTOWFv2(password, user, domain);
             byte[] temp = clientChallengeStructurePadded;
 
-            HMACMD5 hmac = new HMACMD5(key);
+            HMACMD5 hmac = new(key);
             byte[] _NTProof = hmac.ComputeHash(ByteUtils.Concatenate(serverChallenge, temp), 0, serverChallenge.Length + temp.Length);
             return _NTProof;
         }
@@ -87,7 +87,7 @@ namespace SMBLibrary.Authentication.NTLM
 #else
                 DESCryptoServiceProvider desServiceProvider = des as DESCryptoServiceProvider;
                 MethodInfo newEncryptorMethodInfo = desServiceProvider.GetType().GetMethod("_NewEncryptor", BindingFlags.NonPublic | BindingFlags.Instance);
-                object[] encryptorParameters = { rgbKey, mode, rgbIV, desServiceProvider.FeedbackSize, 0 };
+                object[] encryptorParameters = [rgbKey, mode, rgbIV, desServiceProvider.FeedbackSize, 0];
                 transform = newEncryptorMethodInfo.Invoke(desServiceProvider, encryptorParameters) as ICryptoTransform;
 #endif
             }
@@ -188,7 +188,7 @@ namespace SMBLibrary.Authentication.NTLM
             byte[] key = new MD4().GetByteHashFromBytes(passwordBytes);
             string text = user.ToUpper() + domain;
             byte[] bytes = UnicodeEncoding.Unicode.GetBytes(text);
-            HMACMD5 hmac = new HMACMD5(key);
+            HMACMD5 hmac = new(key);
             return hmac.ComputeHash(bytes, 0, bytes.Length);
         }
 
@@ -231,7 +231,7 @@ namespace SMBLibrary.Authentication.NTLM
                 if ((negotiateFlags & NegotiateFlags.LanManagerSessionKey) > 0)
                 {
                     byte[] k1 = ByteReader.ReadBytes(lmowf, 0, 7);
-                    byte[] k2 = ByteUtils.Concatenate(ByteReader.ReadBytes(lmowf, 7, 1), new byte[] { 0xBD, 0xBD, 0xBD, 0xBD, 0xBD, 0xBD });
+                    byte[] k2 = ByteUtils.Concatenate(ByteReader.ReadBytes(lmowf, 7, 1), [0xBD, 0xBD, 0xBD, 0xBD, 0xBD, 0xBD]);
                     byte[] temp1 = DesEncrypt(ExtendDESKey(k1), ByteReader.ReadBytes(lmChallengeResponse, 0, 8));
                     byte[] temp2 = DesEncrypt(ExtendDESKey(k2), ByteReader.ReadBytes(lmChallengeResponse, 0, 8));
                     byte[] keyExchangeKey = ByteUtils.Concatenate(temp1, temp2);
@@ -299,7 +299,7 @@ namespace SMBLibrary.Authentication.NTLM
             byte[] encodedString = Encoding.GetEncoding(28591).GetBytes(str);
             byte[] nullTerminatedEncodedString = ByteUtils.Concatenate(encodedString, new byte[1]);
             byte[] concatendated = ByteUtils.Concatenate(exportedSessionKey, nullTerminatedEncodedString);
-            return MD5.Create().ComputeHash(concatendated);
+            return MD5.HashData(concatendated);
         }
 
         public static byte[] ComputeClientSealKey(byte[] exportedSessionKey)
@@ -327,7 +327,7 @@ namespace SMBLibrary.Authentication.NTLM
             byte[] encodedString = Encoding.GetEncoding(28591).GetBytes(str);
             byte[] nullTerminatedEncodedString = ByteUtils.Concatenate(encodedString, new byte[1]);
             byte[] concatendated = ByteUtils.Concatenate(exportedSessionKey, nullTerminatedEncodedString);
-            return MD5.Create().ComputeHash(concatendated);
+            return MD5.HashData(concatendated);
         }
 
         public static byte[] ComputeMechListMIC(byte[] exportedSessionKey, byte[] message)
@@ -347,7 +347,7 @@ namespace SMBLibrary.Authentication.NTLM
             byte[] sealKey = ComputeClientSealKey(exportedSessionKey);
             byte[] encryptedHash = RC4.Encrypt(sealKey, hash);
 
-            byte[] version = new byte[] { 0x01, 0x00, 0x00, 0x00 };
+            byte[] version = [0x01, 0x00, 0x00, 0x00];
             return ByteUtils.Concatenate(ByteUtils.Concatenate(version, encryptedHash), sequenceNumberBytes);
         }
     }

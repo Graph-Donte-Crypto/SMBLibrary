@@ -15,20 +15,20 @@ namespace SMBLibrary.Server
     {
         private const int MaxSearches = 2048; // Windows servers initialize Server.MaxSearches to 2048.
 
-        private SMB1ConnectionState m_connection;
-        private ushort m_userID;
-        private byte[] m_sessionKey;
-        private SecurityContext m_securityContext;
-        private DateTime m_creationDT;
+        private readonly SMB1ConnectionState m_connection;
+        private readonly ushort m_userID;
+        private readonly byte[] m_sessionKey;
+        private readonly SecurityContext m_securityContext;
+        private readonly DateTime m_creationDT;
 
         // Key is TID
-        private Dictionary<ushort, ISMBShare> m_connectedTrees = new Dictionary<ushort, ISMBShare>();
+        private readonly Dictionary<ushort, ISMBShare> m_connectedTrees = [];
 
         // Key is FID
-        private Dictionary<ushort, OpenFileObject> m_openFiles = new Dictionary<ushort, OpenFileObject>();
+        private readonly Dictionary<ushort, OpenFileObject> m_openFiles = [];
 
         // Key is search handle a.k.a. Search ID
-        private Dictionary<ushort, OpenSearch> m_openSearches = new Dictionary<ushort, OpenSearch>();
+        private readonly Dictionary<ushort, OpenSearch> m_openSearches = [];
         private ushort m_nextSearchHandle = 1;
 
         public SMB1Session(SMB1ConnectionState connection, ushort userID, string userName, string machineName, byte[] sessionKey, object accessToken)
@@ -55,20 +55,18 @@ namespace SMBLibrary.Server
 
         public ISMBShare GetConnectedTree(ushort treeID)
         {
-            ISMBShare share;
-            m_connectedTrees.TryGetValue(treeID, out share);
+            m_connectedTrees.TryGetValue(treeID, out ISMBShare share);
             return share;
         }
 
         public void DisconnectTree(ushort treeID)
         {
-            ISMBShare share;
-            m_connectedTrees.TryGetValue(treeID, out share);
+            m_connectedTrees.TryGetValue(treeID, out ISMBShare share);
             if (share != null)
             {
                 lock (m_connection)
                 {
-                    List<ushort> fileIDList = new List<ushort>(m_openFiles.Keys);
+                    List<ushort> fileIDList = new(m_openFiles.Keys);
                     foreach (ushort fileID in fileIDList)
                     {
                         OpenFileObject openFile = m_openFiles[fileID];
@@ -105,8 +103,7 @@ namespace SMBLibrary.Server
 
         public OpenFileObject GetOpenFileObject(ushort fileID)
         {
-            OpenFileObject openFile;
-            m_openFiles.TryGetValue(fileID, out openFile);
+            m_openFiles.TryGetValue(fileID, out OpenFileObject openFile);
             return openFile;
         }
 
@@ -120,7 +117,7 @@ namespace SMBLibrary.Server
 
         public List<OpenFileInformation> GetOpenFilesInformation()
         {
-            List<OpenFileInformation> result = new List<OpenFileInformation>();
+            List<OpenFileInformation> result = [];
             lock (m_connection)
             {
                 foreach (OpenFileObject openFile in m_openFiles.Values)
@@ -154,7 +151,7 @@ namespace SMBLibrary.Server
             ushort? searchHandle = AllocateSearchHandle();
             if (searchHandle.HasValue)
             {
-                OpenSearch openSearch = new OpenSearch(entries, enumerationLocation);
+                OpenSearch openSearch = new(entries, enumerationLocation);
                 m_openSearches.Add(searchHandle.Value, openSearch);
             }
             return searchHandle;
@@ -162,8 +159,7 @@ namespace SMBLibrary.Server
 
         public OpenSearch GetOpenSearch(ushort searchHandle)
         {
-            OpenSearch openSearch;
-            m_openSearches.TryGetValue(searchHandle, out openSearch);
+            m_openSearches.TryGetValue(searchHandle, out OpenSearch openSearch);
             return openSearch;
         }
 
@@ -177,7 +173,7 @@ namespace SMBLibrary.Server
         /// </summary>
         public void Close()
         {
-            List<ushort> treeIDList = new List<ushort>(m_connectedTrees.Keys);
+            List<ushort> treeIDList = new(m_connectedTrees.Keys);
             foreach (ushort treeID in treeIDList)
             {
                 DisconnectTree(treeID);

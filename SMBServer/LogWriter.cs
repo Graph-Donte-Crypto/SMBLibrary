@@ -14,8 +14,8 @@ namespace SMBServer
 {
     public class LogWriter
     {
-        private string m_logsDirectoryPath;
-        private object m_syncLock = new object();
+        private readonly string m_logsDirectoryPath;
+        private readonly object m_syncLock = new();
         private FileStream m_logFile;
         private DateTime? m_logFileDate;
 
@@ -83,7 +83,7 @@ namespace SMBServer
                 OpenLogFile();
                 if (m_logFile != null)
                 {
-                    StreamWriter writer = new StreamWriter(m_logFile);
+                    StreamWriter writer = new(m_logFile);
                     writer.WriteLine(value);
                     writer.Flush();
                 }
@@ -101,13 +101,9 @@ namespace SMBServer
 
         public static string GetAssemblyDirectory()
         {
-            Assembly assembly = Assembly.GetEntryAssembly();
-            if (assembly == null)
-            {
-                assembly = Assembly.GetExecutingAssembly();
-            }
+            Assembly assembly = Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly();
             string assemblyDirectory = Path.GetDirectoryName(assembly.Location);
-            if (!assemblyDirectory.EndsWith(@"\"))
+            if (!assemblyDirectory.EndsWith('\\'))
             {
                 assemblyDirectory += @"\";
             }

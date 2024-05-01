@@ -6,10 +6,11 @@
  */
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace SMBLibrary.Server
 {
-    public class SMBShareCollection : List<FileSystemShare>
+    public class SMBShareCollection : List<ISMBShare>
     {
         public bool Contains(string shareName, StringComparison comparisonType)
         {
@@ -29,18 +30,10 @@ namespace SMBLibrary.Server
             return -1;
         }
 
-        public List<string> ListShares()
-        {
-            List<string> result = new List<string>();
-            foreach (FileSystemShare share in this)
-            {
-                result.Add(share.Name);
-            }
-            return result;
-        }
+        public List<string> ListShares() => this.Select(x => x.Name).ToList();
 
         /// <param name="shareName">e.g. \Shared</param>
-        public FileSystemShare GetShareFromName(string shareName)
+        public ISMBShare GetShareFromName(string shareName)
         {
             int index = IndexOf(shareName, StringComparison.OrdinalIgnoreCase);
             if (index >= 0)

@@ -17,7 +17,7 @@ namespace SMBServer
     {
         public static List<IPAddress> GetHostIPAddresses()
         {
-            List<IPAddress> result = new List<IPAddress>();
+            List<IPAddress> result = [];
             foreach (NetworkInterface netInterface in NetworkInterface.GetAllNetworkInterfaces())
             {
                 IPInterfaceProperties ipProperties = netInterface.GetIPProperties();

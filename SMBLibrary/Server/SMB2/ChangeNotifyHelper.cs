@@ -42,7 +42,7 @@ namespace SMBLibrary.Server.SMB2
                     state.RemoveAsyncContext(asyncContext);
                 }
 
-                ErrorResponse response = new ErrorResponse(request.CommandName, status);
+                ErrorResponse response = new(request.CommandName, status);
                 if (status == NTStatus.STATUS_PENDING)
                 {
                     response.Header.IsAsync = true;
@@ -73,7 +73,7 @@ namespace SMBLibrary.Server.SMB2
                         status == NTStatus.STATUS_NOTIFY_CLEANUP ||
                         status == NTStatus.STATUS_NOTIFY_ENUM_DIR)
                     {
-                        ChangeNotifyResponse response = new ChangeNotifyResponse();
+                        ChangeNotifyResponse response = new();
                         response.Header.Status = status;
                         response.Header.IsAsync = true;
                         response.Header.IsSigned = session.SigningRequired;
@@ -86,7 +86,7 @@ namespace SMBLibrary.Server.SMB2
                     else
                     {
                         // [MS-SMB2] If the object store returns an error, the server MUST fail the request with the error code received.
-                        ErrorResponse response = new ErrorResponse(SMB2CommandName.ChangeNotify);
+                        ErrorResponse response = new(SMB2CommandName.ChangeNotify);
                         response.Header.Status = status;
                         response.Header.IsAsync = true;
                         response.Header.IsSigned = session.SigningRequired;

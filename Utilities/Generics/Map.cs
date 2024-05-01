@@ -15,13 +15,13 @@ namespace Utilities
 {
     public class Map<T1, T2>
     {
-        private Dictionary<T1, T2> m_forward = new Dictionary<T1, T2>();
-        private Dictionary<T2, T1> m_reverse = new Dictionary<T2, T1>();
+        private readonly Dictionary<T1, T2> m_forward = [];
+        private readonly Dictionary<T2, T1> m_reverse = [];
 
         public Map()
         {
-            m_forward = new Dictionary<T1, T2>();
-            m_reverse = new Dictionary<T2, T1>();
+            m_forward = [];
+            m_reverse = [];
         }
 
         public void Add(T1 key, T2 value)
@@ -52,8 +52,7 @@ namespace Utilities
 
         public void RemoveKey(T1 key)
         {
-            T2 value;
-            if (m_forward.TryGetValue(key, out value))
+            if (m_forward.TryGetValue(key, out T2 value))
             {
                 m_forward.Remove(key);
                 m_reverse.Remove(value);
@@ -62,8 +61,7 @@ namespace Utilities
 
         public void RemoveValue(T2 value)
         {
-            T1 key;
-            if (m_reverse.TryGetValue(value, out key))
+            if (m_reverse.TryGetValue(value, out T1 key))
             {
                 m_forward.Remove(key);
                 m_reverse.Remove(value);

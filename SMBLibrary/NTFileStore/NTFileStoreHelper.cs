@@ -119,15 +119,12 @@ namespace SMBLibrary
 
         public static FileNetworkOpenInformation GetNetworkOpenInformation(INTFileStore fileStore, string path, SecurityContext securityContext)
         {
-            object handle;
-            FileStatus fileStatus;
-            NTStatus openStatus = fileStore.CreateFile(out handle, out fileStatus, path, (AccessMask)FileAccessMask.FILE_READ_ATTRIBUTES, 0, ShareAccess.Read | ShareAccess.Write, CreateDisposition.FILE_OPEN, 0, securityContext);
+            NTStatus openStatus = fileStore.CreateFile(out object handle, out FileStatus fileStatus, path, (AccessMask)FileAccessMask.FILE_READ_ATTRIBUTES, 0, ShareAccess.Read | ShareAccess.Write, CreateDisposition.FILE_OPEN, 0, securityContext);
             if (openStatus != NTStatus.STATUS_SUCCESS)
             {
                 return null;
             }
-            FileInformation fileInfo;
-            NTStatus queryStatus = fileStore.GetFileInformation(out fileInfo, handle, FileInformationClass.FileNetworkOpenInformation);
+            NTStatus queryStatus = fileStore.GetFileInformation(out FileInformation fileInfo, handle, FileInformationClass.FileNetworkOpenInformation);
             fileStore.CloseFile(handle);
             if (queryStatus != NTStatus.STATUS_SUCCESS)
             {
@@ -138,8 +135,7 @@ namespace SMBLibrary
 
         public static FileNetworkOpenInformation GetNetworkOpenInformation(INTFileStore fileStore, object handle)
         {
-            FileInformation fileInfo;
-            NTStatus status = fileStore.GetFileInformation(out fileInfo, handle, FileInformationClass.FileNetworkOpenInformation);
+            NTStatus status = fileStore.GetFileInformation(out FileInformation fileInfo, handle, FileInformationClass.FileNetworkOpenInformation);
             if (status != NTStatus.STATUS_SUCCESS)
             {
                 return null;

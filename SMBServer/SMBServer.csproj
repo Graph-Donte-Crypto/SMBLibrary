@@ -1,18 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
 
-  <PropertyGroup>
-    <OutputType>WinExe</OutputType>
-    <TargetFrameworks>net20;net40;netcoreapp3.1</TargetFrameworks>
-    <Copyright>Copyright © Tal Aloni 2014-2024</Copyright>
-    <AssemblyName>SMBServer</AssemblyName>
-    <Version>1.5.1</Version>
-    <RootNamespace>SMBServer</RootNamespace>
-    <UseWindowsForms>true</UseWindowsForms>
-  </PropertyGroup>
-
-  <ItemGroup Condition=" '$(TargetFramework)' == 'net20' ">
-    <Reference Include="System.Windows.Forms" />
-  </ItemGroup>
+	<PropertyGroup>
+		<OutputType>exe</OutputType>
+		<TargetFrameworks>net8.0</TargetFrameworks>
+		<Copyright>Copyright © Tal Aloni 2014-2024</Copyright>
+		<AssemblyName>SMBServer</AssemblyName>
+		<Version>1.5.1</Version>
+		<RootNamespace>SMBServer</RootNamespace>
+	</PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\SMBLibrary.Win32\SMBLibrary.Win32.csproj" />

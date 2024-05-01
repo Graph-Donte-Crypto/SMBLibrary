@@ -245,8 +245,7 @@ namespace SMBLibrary.Client
             else
             {
                 QueryInformationLevel informationLevel = QueryInformationHelper.ToFileInformationLevel(informationClass);
-                QueryInformation queryInformation;
-                NTStatus status = GetFileInformation(out queryInformation, handle, informationLevel);
+                NTStatus status = GetFileInformation(out QueryInformation queryInformation, handle, informationLevel);
                 if (status == NTStatus.STATUS_SUCCESS)
                 {
                     result = QueryInformationHelper.ToFileInformation(queryInformation);
@@ -599,23 +598,16 @@ namespace SMBLibrary.Client
 
         private static FileStatus ToFileStatus(CreateDisposition createDisposition)
         {
-            switch (createDisposition)
+            return createDisposition switch
             {
-                case CreateDisposition.FILE_SUPERSEDE:
-                    return FileStatus.FILE_SUPERSEDED;
-                case CreateDisposition.FILE_OPEN:
-                    return FileStatus.FILE_OPENED;
-                case CreateDisposition.FILE_CREATE:
-                    return FileStatus.FILE_CREATED;
-                case CreateDisposition.FILE_OPEN_IF:
-                    return FileStatus.FILE_OVERWRITTEN;
-                case CreateDisposition.FILE_OVERWRITE:
-                    return FileStatus.FILE_EXISTS;
-                case CreateDisposition.FILE_OVERWRITE_IF:
-                    return FileStatus.FILE_DOES_NOT_EXIST;
-                default:
-                    return FileStatus.FILE_OPENED;
-            }
+                CreateDisposition.FILE_SUPERSEDE => FileStatus.FILE_SUPERSEDED,
+                CreateDisposition.FILE_OPEN => FileStatus.FILE_OPENED,
+                CreateDisposition.FILE_CREATE => FileStatus.FILE_CREATED,
+                CreateDisposition.FILE_OPEN_IF => FileStatus.FILE_OVERWRITTEN,
+                CreateDisposition.FILE_OVERWRITE => FileStatus.FILE_EXISTS,
+                CreateDisposition.FILE_OVERWRITE_IF => FileStatus.FILE_DOES_NOT_EXIST,
+                _ => FileStatus.FILE_OPENED,
+            };
         }
     }
 }

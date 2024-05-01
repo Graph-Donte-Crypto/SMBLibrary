@@ -21,15 +21,14 @@ namespace SMBLibrary.Server.SMB2
         internal static SMB2Command GetSessionSetupResponse(SessionSetupRequest request, GSSProvider securityProvider, SMB2ConnectionState state)
         {
             // [MS-SMB2] Windows [..] will also accept raw Kerberos messages and implicit NTLM messages as part of GSS authentication.
-            SessionSetupResponse response = new SessionSetupResponse();
-            byte[] outputToken;
-            NTStatus status = securityProvider.AcceptSecurityContext(ref state.AuthenticationContext, request.SecurityBuffer, out outputToken);
+            SessionSetupResponse response = new();
+            NTStatus status = securityProvider.AcceptSecurityContext(ref state.AuthenticationContext, request.SecurityBuffer, out byte[] outputToken);
             if (status != NTStatus.STATUS_SUCCESS && status != NTStatus.SEC_I_CONTINUE_NEEDED)
             {
-                string userName = securityProvider.GetContextAttribute(state.AuthenticationContext, GSSAttributeName.UserName) as string;
-                string domainName = securityProvider.GetContextAttribute(state.AuthenticationContext, GSSAttributeName.DomainName) as string;
-                string machineName = securityProvider.GetContextAttribute(state.AuthenticationContext, GSSAttributeName.MachineName) as string;
-                string osVersion = securityProvider.GetContextAttribute(state.AuthenticationContext, GSSAttributeName.OSVersion) as string;
+                string userName = state.AuthenticationContext.GetContextAttribute(GSSAttributeName.UserName) as string;
+                string domainName = state.AuthenticationContext.GetContextAttribute(GSSAttributeName.DomainName) as string;
+                string machineName = state.AuthenticationContext.GetContextAttribute(GSSAttributeName.MachineName) as string;
+                string osVersion = state.AuthenticationContext.GetContextAttribute(GSSAttributeName.OSVersion) as string;
                 state.LogToServer(Severity.Information, "Session Setup: User '{0}' failed authentication (Domain: '{1}', Workstation: '{2}', OS version: '{3}'), NTStatus: {4}", userName, domainName, machineName, osVersion, status);
                 return new ErrorResponse(request.CommandName, status);
             }
@@ -63,13 +62,13 @@ namespace SMBLibrary.Server.SMB2
             }
             else // status == STATUS_SUCCESS
             {
-                string userName = securityProvider.GetContextAttribute(state.AuthenticationContext, GSSAttributeName.UserName) as string;
-                string domainName = securityProvider.GetContextAttribute(state.AuthenticationContext, GSSAttributeName.DomainName) as string;
-                string machineName = securityProvider.GetContextAttribute(state.AuthenticationContext, GSSAttributeName.MachineName) as string;
-                string osVersion = securityProvider.GetContextAttribute(state.AuthenticationContext, GSSAttributeName.OSVersion) as string;
-                byte[] sessionKey = securityProvider.GetContextAttribute(state.AuthenticationContext, GSSAttributeName.SessionKey) as byte[];
-                object accessToken = securityProvider.GetContextAttribute(state.AuthenticationContext, GSSAttributeName.AccessToken);
-                bool? isGuest = securityProvider.GetContextAttribute(state.AuthenticationContext, GSSAttributeName.IsGuest) as bool?;
+                string userName = state.AuthenticationContext.GetContextAttribute(GSSAttributeName.UserName) as string;
+                string domainName = state.AuthenticationContext.GetContextAttribute(GSSAttributeName.DomainName) as string;
+                string machineName = state.AuthenticationContext.GetContextAttribute(GSSAttributeName.MachineName) as string;
+                string osVersion = state.AuthenticationContext.GetContextAttribute(GSSAttributeName.OSVersion) as string;
+                byte[] sessionKey = state.AuthenticationContext.GetContextAttribute(GSSAttributeName.SessionKey) as byte[];
+                object accessToken = state.AuthenticationContext.GetContextAttribute(GSSAttributeName.AccessToken);
+                bool? isGuest = state.AuthenticationContext.GetContextAttribute(GSSAttributeName.IsGuest) as bool?;
 
                 if (sessionKey != null && sessionKey.Length > 16)
                 {

@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
+using System.Threading.Tasks;
 using SMBLibrary.Authentication.GSSAPI;
 using SMBLibrary.NetBios;
 using SMBLibrary.SMB1;
@@ -25,16 +26,14 @@ namespace SMBLibrary.Server
         public static readonly bool EnableExtendedSecurity = true;
         private static readonly int InactivityMonitoringInterval = 30000; // Check every 30 seconds
 
-        private SMBShareCollection m_shares; // e.g. Shared folders
-        private GSSProvider m_securityProvider;
-        private NamedPipeShare m_services; // Named pipes
-        private Guid m_serverGuid;
+        private readonly SMBShareCollection Shares; // e.g. Shared folders
+        private readonly GSSProvider SecurityProvider;
+        private readonly NamedPipeShare m_services; // Named pipes
+        private readonly Guid m_serverGuid;
 
-        private ConnectionManager m_connectionManager;
-        private Thread m_sendSMBKeepAliveThread;
-#if !NET20
+        private readonly ConnectionManager m_connectionManager;
+        private Task m_sendSMBKeepAliveTask;
         private CancellationTokenSource m_sendSMBKeepAliveCancellationTokenSource;
-#endif
 
         private IPAddress m_serverAddress;
         private SMBTransportType m_transport;
@@ -50,8 +49,8 @@ namespace SMBLibrary.Server
 
         public SMBServer(SMBShareCollection shares, GSSProvider securityProvider)
         {
-            m_shares = shares;
-            m_securityProvider = securityProvider;
+            Shares = shares;
+            SecurityProvider = securityProvider;
             m_services = new NamedPipeShare(shares.ListShares());
             m_serverGuid = Guid.NewGuid();
             m_connectionManager = new ConnectionManager();
@@ -109,27 +108,21 @@ namespace SMBLibrary.Server
 
                 if (connectionInactivityTimeout.HasValue)
                 {
-#if !NET20
+
                     m_sendSMBKeepAliveCancellationTokenSource = new CancellationTokenSource();
-#endif
-                    m_sendSMBKeepAliveThread = new Thread(delegate()
+
+                    m_sendSMBKeepAliveTask = Task.Run(() =>
                     {
                         while (m_listening)
                         {
-#if NET20
-                            Thread.Sleep(InactivityMonitoringInterval);
-#else
                             bool cancelled = m_sendSMBKeepAliveCancellationTokenSource.Token.WaitHandle.WaitOne(InactivityMonitoringInterval);
                             if (cancelled)
                             {
                                 return;
                             }
-#endif
                             m_connectionManager.SendSMBKeepAlive(connectionInactivityTimeout.Value);
                         }
                     });
-                    m_sendSMBKeepAliveThread.IsBackground = true;
-                    m_sendSMBKeepAliveThread.Start();
                 }
             }
         }
@@ -138,13 +131,9 @@ namespace SMBLibrary.Server
         {
             Log(Severity.Information, "Stopping server");
             m_listening = false;
-            if (m_sendSMBKeepAliveThread != null)
+            if (m_sendSMBKeepAliveTask != null)
             {
-#if NET20
-                m_sendSMBKeepAliveThread.Abort();
-#else
                 m_sendSMBKeepAliveCancellationTokenSource?.Cancel();
-#endif
             }
             SocketUtils.ReleaseSocket(m_listenerSocket);
             m_connectionManager.ReleaseAllConnections();
@@ -187,21 +176,19 @@ namespace SMBLibrary.Server
             bool acceptConnection = true;
             if (handler != null)
             {
-                ConnectionRequestEventArgs connectionRequestArgs = new ConnectionRequestEventArgs(clientEndPoint);
+                ConnectionRequestEventArgs connectionRequestArgs = new(clientEndPoint);
                 handler(this, connectionRequestArgs);
                 acceptConnection = connectionRequestArgs.Accept;
             }
 
             if (acceptConnection)
             {
-                ConnectionState state = new ConnectionState(clientSocket, clientEndPoint, Log);
+                ConnectionState state = new(clientSocket, clientEndPoint, Log);
                 state.LogToServer(Severity.Verbose, "New connection request accepted");
-                Thread senderThread = new Thread(delegate()
+                Task senderThread = Task.Run(() =>
                 {
                     ProcessSendQueue(state);
                 });
-                senderThread.IsBackground = true;
-                senderThread.Start();
 
                 try
                 {
@@ -293,12 +280,10 @@ namespace SMBLibrary.Server
 
         private void ProcessConnectionBuffer(ref ConnectionState state)
         {
-            Socket clientSocket = state.ClientSocket;
-
             NBTConnectionReceiveBuffer receiveBuffer = state.ReceiveBuffer;
             while (receiveBuffer.HasCompletePacket())
             {
-                SessionPacket packet = null;
+                SessionPacket packet;
                 try
                 {
                     packet = receiveBuffer.DequeuePacket();
@@ -337,7 +322,7 @@ namespace SMBLibrary.Server
                         return;
                     }
 
-                    SMB1Message message = null;
+                    SMB1Message message;
                     try
                     {
                         message = SMB1Message.GetSMB1Message(packet.Trailer);
@@ -356,7 +341,7 @@ namespace SMBLibrary.Server
                         List<string> smb2Dialects = SMB2.NegotiateHelper.FindSMB2Dialects(message);
                         if (smb2Dialects.Count > 0)
                         {
-                            SMB2Command response = SMB2.NegotiateHelper.GetNegotiateResponse(smb2Dialects, m_securityProvider, state, m_transport, m_serverGuid, m_serverStartTime);
+                            SMB2Command response = SMB2.NegotiateHelper.GetNegotiateResponse(smb2Dialects, SecurityProvider, state, m_transport, m_serverGuid, m_serverStartTime);
                             if (state.Dialect != SMBDialect.NotSet)
                             {
                                 state = new SMB2ConnectionState(state);
@@ -412,7 +397,7 @@ namespace SMBLibrary.Server
             }
             else if (packet is SessionRequestPacket && m_transport == SMBTransportType.NetBiosOverTCP)
             {
-                PositiveSessionResponsePacket response = new PositiveSessionResponsePacket();
+                PositiveSessionResponsePacket response = new();
                 state.SendQueue.Enqueue(response);
             }
             else if (packet is SessionKeepAlivePacket && m_transport == SMBTransportType.NetBiosOverTCP)
@@ -433,8 +418,7 @@ namespace SMBLibrary.Server
             state.LogToServer(Severity.Trace, "Entering ProcessSendQueue");
             while (true)
             {
-                SessionPacket response;
-                bool stopped = !state.SendQueue.TryDequeue(out response);
+                bool stopped = !state.SendQueue.TryDequeue(out SessionPacket response);
                 if (stopped)
                 {
                     return;
@@ -463,24 +447,14 @@ namespace SMBLibrary.Server
             }
         }
 
-        public List<SessionInformation> GetSessionsInformation()
-        {
-            return m_connectionManager.GetSessionsInformation();
-        }
+        public List<SessionInformation> GetSessionsInformation() => m_connectionManager.GetSessionsInformation();
 
-        public void TerminateConnection(IPEndPoint clientEndPoint)
-        {
-            m_connectionManager.ReleaseConnection(clientEndPoint);
-        }
+        public void TerminateConnection(IPEndPoint clientEndPoint) => m_connectionManager.ReleaseConnection(clientEndPoint);
 
         private void Log(Severity severity, string message)
         {
             // To be thread-safe we must capture the delegate reference first
-            EventHandler<LogEntry> handler = LogEntryAdded;
-            if (handler != null)
-            {
-                handler(this, new LogEntry(DateTime.Now, severity, "SMB Server", message));
-            }
+            LogEntryAdded?.Invoke(this, new LogEntry(DateTime.Now, severity, "SMB Server", message));
         }
 
         private void Log(Severity severity, string message, params object[] args)

@@ -15,36 +15,26 @@ namespace SMBLibrary.SMB1
     {
         public static string GetServiceString(ServiceName serviceName)
         {
-            switch (serviceName)
+            return serviceName switch
             {
-                case ServiceName.DiskShare:
-                    return "A:";
-                case ServiceName.PrinterShare:
-                    return "LPT1:";
-                case ServiceName.NamedPipe:
-                    return "IPC";
-                case ServiceName.SerialCommunicationsDevice:
-                    return "COMM";
-                default:
-                    return "?????";
-            }
+                ServiceName.DiskShare => "A:",
+                ServiceName.PrinterShare => "LPT1:",
+                ServiceName.NamedPipe => "IPC",
+                ServiceName.SerialCommunicationsDevice => "COMM",
+                _ => "?????",
+            };
         }
 
         public static ServiceName GetServiceName(string serviceString)
         {
-            switch (serviceString)
+            return serviceString switch
             {
-                case "A:":
-                    return ServiceName.DiskShare;
-                case "LPT1:":
-                    return ServiceName.PrinterShare;
-                case "IPC":
-                    return ServiceName.NamedPipe;
-                case "COMM":
-                    return ServiceName.SerialCommunicationsDevice;
-                default:
-                    return ServiceName.AnyType;
-            }
+                "A:" => ServiceName.DiskShare,
+                "LPT1:" => ServiceName.PrinterShare,
+                "IPC" => ServiceName.NamedPipe,
+                "COMM" => ServiceName.SerialCommunicationsDevice,
+                _ => ServiceName.AnyType,
+            };
         }
     }
 }

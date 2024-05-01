@@ -41,84 +41,43 @@ namespace SMBLibrary.SMB2
             return buffer;
         }
 
-        public SMB2CommandName CommandName
-        {
-            get
-            {
-                return Header.Command;
-            }
-        }
+        public SMB2CommandName CommandName => Header.Command;
 
-        public ulong MessageID
-        {
-            get
-            {
-                return Header.MessageID;
-            }
-        }
+        public ulong MessageID => Header.MessageID;
 
-        public int Length
-        {
-            get
-            {
-                return SMB2Header.Length + CommandLength;
-            }
-        }
-
-        public abstract int CommandLength
-        {
-            get;
-        }
+        public int Length => SMB2Header.Length + CommandLength;
+        public abstract int CommandLength { get; }
 
         public static SMB2Command ReadRequest(byte[] buffer, int offset)
         {
             SMB2CommandName commandName = (SMB2CommandName)LittleEndianConverter.ToUInt16(buffer, offset + 12);
-            switch (commandName)
+            return commandName switch
             {
-                case SMB2CommandName.Negotiate:
-                    return new NegotiateRequest(buffer, offset);
-                case SMB2CommandName.SessionSetup:
-                    return new SessionSetupRequest(buffer, offset);
-                case SMB2CommandName.Logoff:
-                    return new LogoffRequest(buffer, offset);
-                case SMB2CommandName.TreeConnect:
-                    return new TreeConnectRequest(buffer, offset);
-                case SMB2CommandName.TreeDisconnect:
-                    return new TreeDisconnectRequest(buffer, offset);
-                case SMB2CommandName.Create:
-                    return new CreateRequest(buffer, offset);
-                case SMB2CommandName.Close:
-                    return new CloseRequest(buffer, offset);
-                case SMB2CommandName.Flush:
-                    return new FlushRequest(buffer, offset);
-                case SMB2CommandName.Read:
-                    return new ReadRequest(buffer, offset);
-                case SMB2CommandName.Write:
-                    return new WriteRequest(buffer, offset);
-                case SMB2CommandName.Lock:
-                    return new LockRequest(buffer, offset);
-                case SMB2CommandName.IOCtl:
-                    return new IOCtlRequest(buffer, offset);
-                case SMB2CommandName.Cancel:
-                    return new CancelRequest(buffer, offset);
-                case SMB2CommandName.Echo:
-                    return new EchoRequest(buffer, offset);
-                case SMB2CommandName.QueryDirectory:
-                    return new QueryDirectoryRequest(buffer, offset);
-                case SMB2CommandName.ChangeNotify:
-                    return new ChangeNotifyRequest(buffer, offset);
-                case SMB2CommandName.QueryInfo:
-                    return new QueryInfoRequest(buffer, offset);
-                case SMB2CommandName.SetInfo:
-                    return new SetInfoRequest(buffer, offset);
-                default:
-                    throw new InvalidDataException("Invalid SMB2 command 0x" + ((ushort)commandName).ToString("X4"));
-            }
+                SMB2CommandName.Negotiate => new NegotiateRequest(buffer, offset),
+                SMB2CommandName.SessionSetup => new SessionSetupRequest(buffer, offset),
+                SMB2CommandName.Logoff => new LogoffRequest(buffer, offset),
+                SMB2CommandName.TreeConnect => new TreeConnectRequest(buffer, offset),
+                SMB2CommandName.TreeDisconnect => new TreeDisconnectRequest(buffer, offset),
+                SMB2CommandName.Create => new CreateRequest(buffer, offset),
+                SMB2CommandName.Close => new CloseRequest(buffer, offset),
+                SMB2CommandName.Flush => new FlushRequest(buffer, offset),
+                SMB2CommandName.Read => new ReadRequest(buffer, offset),
+                SMB2CommandName.Write => new WriteRequest(buffer, offset),
+                SMB2CommandName.Lock => new LockRequest(buffer, offset),
+                SMB2CommandName.IOCtl => new IOCtlRequest(buffer, offset),
+                SMB2CommandName.Cancel => new CancelRequest(buffer, offset),
+                SMB2CommandName.Echo => new EchoRequest(buffer, offset),
+                SMB2CommandName.QueryDirectory => new QueryDirectoryRequest(buffer, offset),
+                SMB2CommandName.ChangeNotify => new ChangeNotifyRequest(buffer, offset),
+                SMB2CommandName.QueryInfo => new QueryInfoRequest(buffer, offset),
+                SMB2CommandName.SetInfo => new SetInfoRequest(buffer, offset),
+                _ => throw new InvalidDataException("Invalid SMB2 command 0x" + ((ushort)commandName).ToString("X4")),
+            };
         }
 
         public static List<SMB2Command> ReadRequestChain(byte[] buffer, int offset)
         {
-            List<SMB2Command> result = new List<SMB2Command>();
+            List<SMB2Command> result = [];
             SMB2Command command;
             do
             {
@@ -488,7 +447,7 @@ namespace SMBLibrary.SMB2
 
         public static List<SMB2Command> ReadResponseChain(byte[] buffer, int offset)
         {
-            List<SMB2Command> result = new List<SMB2Command>();
+            List<SMB2Command> result = [];
             SMB2Command command;
             do
             {

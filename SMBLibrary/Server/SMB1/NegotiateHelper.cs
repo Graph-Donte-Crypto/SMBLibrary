@@ -26,15 +26,15 @@ namespace SMBLibrary.Server.SMB1
 
         internal static NegotiateResponse GetNegotiateResponse(SMB1Header header, NegotiateRequest request, GSSProvider securityProvider, ConnectionState state)
         {
-            NegotiateResponse response = new NegotiateResponse();
-
-            response.DialectIndex = (ushort)request.Dialects.IndexOf(SMBServer.NTLanManagerDialect);
-            response.SecurityMode = SecurityMode.UserSecurityMode | SecurityMode.EncryptPasswords;
-            response.MaxMpxCount = ServerMaxMpxCount;
-            response.MaxNumberVcs = ServerNumberVcs;
-            response.MaxBufferSize = ServerMaxBufferSize;
-            response.MaxRawSize = ServerMaxRawSize;
-            response.Capabilities = Capabilities.Unicode |
+            NegotiateResponse response = new()
+            {
+                DialectIndex = (ushort)request.Dialects.IndexOf(SMBServer.NTLanManagerDialect),
+                SecurityMode = SecurityMode.UserSecurityMode | SecurityMode.EncryptPasswords,
+                MaxMpxCount = ServerMaxMpxCount,
+                MaxNumberVcs = ServerNumberVcs,
+                MaxBufferSize = ServerMaxBufferSize,
+                MaxRawSize = ServerMaxRawSize,
+                Capabilities = Capabilities.Unicode |
                                     Capabilities.LargeFiles |
                                     Capabilities.NTSMB |
                                     Capabilities.RpcRemoteApi |
@@ -42,32 +42,35 @@ namespace SMBLibrary.Server.SMB1
                                     Capabilities.NTFind |
                                     Capabilities.InfoLevelPassthrough |
                                     Capabilities.LargeRead |
-                                    Capabilities.LargeWrite;
-            response.SystemTime = DateTime.UtcNow;
-            response.ServerTimeZone = (short)-TimeZone.CurrentTimeZone.GetUtcOffset(DateTime.Now).TotalMinutes;
+                                    Capabilities.LargeWrite,
+                SystemTime = DateTime.UtcNow,
+                ServerTimeZone = (short)-TimeZoneInfo.Local.GetUtcOffset(DateTime.Now).TotalMinutes,
+                DomainName = String.Empty,
+                ServerName = String.Empty
+            };
+            
             NegotiateMessage negotiateMessage = CreateNegotiateMessage();
-            ChallengeMessage challengeMessage;
-            NTStatus status = securityProvider.GetNTLMChallengeMessage(out state.AuthenticationContext, negotiateMessage, out challengeMessage);
+            NTStatus status = securityProvider.GetNTLMChallengeMessage(out state.AuthenticationContext, negotiateMessage, out ChallengeMessage challengeMessage);
             if (status == NTStatus.SEC_I_CONTINUE_NEEDED)
             {
                 response.Challenge = challengeMessage.ServerChallenge;
             }
-            response.DomainName = String.Empty;
-            response.ServerName = String.Empty;
+            
 
             return response;
         }
 
         internal static NegotiateResponseExtended GetNegotiateResponseExtended(NegotiateRequest request, Guid serverGuid)
         {
-            NegotiateResponseExtended response = new NegotiateResponseExtended();
-            response.DialectIndex = (ushort)request.Dialects.IndexOf(SMBServer.NTLanManagerDialect);
-            response.SecurityMode = SecurityMode.UserSecurityMode | SecurityMode.EncryptPasswords;
-            response.MaxMpxCount = ServerMaxMpxCount;
-            response.MaxNumberVcs = ServerNumberVcs;
-            response.MaxBufferSize = ServerMaxBufferSize;
-            response.MaxRawSize = ServerMaxRawSize;
-            response.Capabilities = Capabilities.Unicode |
+            NegotiateResponseExtended response = new()
+            {
+                DialectIndex = (ushort)request.Dialects.IndexOf(SMBServer.NTLanManagerDialect),
+                SecurityMode = SecurityMode.UserSecurityMode | SecurityMode.EncryptPasswords,
+                MaxMpxCount = ServerMaxMpxCount,
+                MaxNumberVcs = ServerNumberVcs,
+                MaxBufferSize = ServerMaxBufferSize,
+                MaxRawSize = ServerMaxRawSize,
+                Capabilities = Capabilities.Unicode |
                                     Capabilities.LargeFiles |
                                     Capabilities.NTSMB |
                                     Capabilities.RpcRemoteApi |
@@ -76,18 +79,20 @@ namespace SMBLibrary.Server.SMB1
                                     Capabilities.InfoLevelPassthrough |
                                     Capabilities.LargeRead |
                                     Capabilities.LargeWrite |
-                                    Capabilities.ExtendedSecurity;
-            response.SystemTime = DateTime.UtcNow;
-            response.ServerTimeZone = (short)-TimeZone.CurrentTimeZone.GetUtcOffset(DateTime.Now).TotalMinutes;
-            response.ServerGuid = serverGuid;
+                                    Capabilities.ExtendedSecurity,
+                SystemTime = DateTime.UtcNow,
+                ServerTimeZone = (short)-TimeZoneInfo.Local.GetUtcOffset(DateTime.Now).TotalMinutes,
+                ServerGuid = serverGuid
+            };
 
             return response;
         }
 
         private static NegotiateMessage CreateNegotiateMessage()
         {
-            NegotiateMessage negotiateMessage = new NegotiateMessage();
-            negotiateMessage.NegotiateFlags = NegotiateFlags.UnicodeEncoding |
+            NegotiateMessage negotiateMessage = new()
+            {
+                NegotiateFlags = NegotiateFlags.UnicodeEncoding |
                                               NegotiateFlags.OEMEncoding |
                                               NegotiateFlags.Sign |
                                               NegotiateFlags.LanManagerSessionKey |
@@ -95,8 +100,9 @@ namespace SMBLibrary.Server.SMB1
                                               NegotiateFlags.AlwaysSign |
                                               NegotiateFlags.Version |
                                               NegotiateFlags.Use128BitEncryption |
-                                              NegotiateFlags.Use56BitEncryption;
-            negotiateMessage.Version = NTLMVersion.Server2003;
+                                              NegotiateFlags.Use56BitEncryption,
+                Version = NTLMVersion.Server2003
+            };
             return negotiateMessage;
         }
     }

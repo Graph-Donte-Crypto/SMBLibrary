@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Win32.SafeHandles;
 using Utilities;
 
@@ -34,13 +35,13 @@ namespace SMBLibrary.Win32
             Buffer = IntPtr.Zero;
         }
 
-        public override string ToString()
+        public override readonly string ToString()
         {
             return Marshal.PtrToStringUni(Buffer);
         }
     }
 
-    [StructLayoutAttribute(LayoutKind.Sequential)]
+    [StructLayout(LayoutKind.Sequential)]
     public struct OBJECT_ATTRIBUTES
     {
         public int Length;
@@ -127,8 +128,8 @@ namespace SMBLibrary.Win32
         private static readonly int FileInformationBufferSize = 8192;
         private static readonly int FileSystemInformationBufferSize = 4096;
 
-        private DirectoryInfo m_directory;
-        private PendingRequestCollection m_pendingRequests = new PendingRequestCollection();
+        private readonly DirectoryInfo m_directory;
+        private readonly PendingRequestCollection m_pendingRequests = new();
 
         public NTDirectoryFileSystem(string path) : this(new DirectoryInfo(path))
         {
@@ -141,12 +142,15 @@ namespace SMBLibrary.Win32
 
         private OBJECT_ATTRIBUTES InitializeObjectAttributes(UNICODE_STRING objectName)
         {
-            OBJECT_ATTRIBUTES objectAttributes = new OBJECT_ATTRIBUTES();
-            objectAttributes.RootDirectory = IntPtr.Zero;
-            objectAttributes.ObjectName = Marshal.AllocHGlobal(Marshal.SizeOf(objectName));
+            OBJECT_ATTRIBUTES objectAttributes = new()
+            {
+                RootDirectory = IntPtr.Zero,
+                ObjectName = Marshal.AllocHGlobal(Marshal.SizeOf(objectName)),
+                SecurityDescriptor = IntPtr.Zero,
+                SecurityQualityOfService = IntPtr.Zero
+            };
             Marshal.StructureToPtr(objectName, objectAttributes.ObjectName, false);
-            objectAttributes.SecurityDescriptor = IntPtr.Zero;
-            objectAttributes.SecurityQualityOfService = IntPtr.Zero;
+
 
             objectAttributes.Length = Marshal.SizeOf(objectAttributes);
             return objectAttributes;
@@ -154,17 +158,16 @@ namespace SMBLibrary.Win32
 
         private NTStatus CreateFile(out IntPtr handle, out FileStatus fileStatus, string nativePath, AccessMask desiredAccess, long allocationSize, FileAttributes fileAttributes, ShareAccess shareAccess, CreateDisposition createDisposition, CreateOptions createOptions)
         {
-            UNICODE_STRING objectName = new UNICODE_STRING(nativePath);
+            UNICODE_STRING objectName = new(nativePath);
             OBJECT_ATTRIBUTES objectAttributes = InitializeObjectAttributes(objectName);
-            IO_STATUS_BLOCK ioStatusBlock;
-            NTStatus status = NtCreateFile(out handle, (uint)desiredAccess, ref objectAttributes, out ioStatusBlock, ref allocationSize, fileAttributes, shareAccess, createDisposition, createOptions, IntPtr.Zero, 0);
+            NTStatus status = NtCreateFile(out handle, (uint)desiredAccess, ref objectAttributes, out IO_STATUS_BLOCK ioStatusBlock, ref allocationSize, fileAttributes, shareAccess, createDisposition, createOptions, IntPtr.Zero, 0);
             fileStatus = (FileStatus)ioStatusBlock.Information;
             return status;
         }
 
         private string ToNativePath(string path)
         {
-            if (!path.StartsWith(@"\"))
+            if (!path.StartsWith('\\'))
             {
                 path = @"\" + path;
             }
@@ -173,7 +176,6 @@ namespace SMBLibrary.Win32
 
         public NTStatus CreateFile(out object handle, out FileStatus fileStatus, string path, AccessMask desiredAccess, FileAttributes fileAttributes, ShareAccess shareAccess, CreateDisposition createDisposition, CreateOptions createOptions, SecurityContext securityContext)
         {
-            IntPtr fileHandle;
             string nativePath = ToNativePath(path);
             // NtQueryDirectoryFile will return STATUS_PENDING if the directory handle was not opened with SYNCHRONIZE and FILE_SYNCHRONOUS_IO_ALERT or FILE_SYNCHRONOUS_IO_NONALERT.
             // Our usage of NtNotifyChangeDirectoryFile assumes the directory handle is opened with SYNCHRONIZE and FILE_SYNCHRONOUS_IO_ALERT (or FILE_SYNCHRONOUS_IO_NONALERT starting from Windows Vista).
@@ -190,7 +192,7 @@ namespace SMBLibrary.Win32
                 desiredAccess = (AccessMask)((uint)desiredAccess & (uint)~FileAccessMask.FILE_APPEND_DATA);
             }
 
-            NTStatus status = CreateFile(out fileHandle, out fileStatus, nativePath, desiredAccess, 0, fileAttributes, shareAccess, createDisposition, createOptions);
+            NTStatus status = CreateFile(out nint fileHandle, out fileStatus, nativePath, desiredAccess, 0, fileAttributes, shareAccess, createDisposition, createOptions);
             handle = fileHandle;
             return status;
         }
@@ -212,9 +214,8 @@ namespace SMBLibrary.Win32
 
         public NTStatus ReadFile(out byte[] data, object handle, long offset, int maxCount)
         {
-            IO_STATUS_BLOCK ioStatusBlock;
             data = new byte[maxCount];
-            NTStatus status = NtReadFile((IntPtr)handle, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, out ioStatusBlock, data, (uint)maxCount, ref offset, IntPtr.Zero);
+            NTStatus status = NtReadFile((IntPtr)handle, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, out IO_STATUS_BLOCK ioStatusBlock, data, (uint)maxCount, ref offset, IntPtr.Zero);
             if (status == NTStatus.STATUS_SUCCESS)
             {
                 int bytesRead = (int)ioStatusBlock.Information;
@@ -228,8 +229,7 @@ namespace SMBLibrary.Win32
 
         public NTStatus WriteFile(out int numberOfBytesWritten, object handle, long offset, byte[] data)
         {
-            IO_STATUS_BLOCK ioStatusBlock;
-            NTStatus status = NtWriteFile((IntPtr)handle, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, out ioStatusBlock, data, (uint)data.Length, ref offset, IntPtr.Zero);
+            NTStatus status = NtWriteFile((IntPtr)handle, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, out IO_STATUS_BLOCK ioStatusBlock, data, (uint)data.Length, ref offset, IntPtr.Zero);
             if (status == NTStatus.STATUS_SUCCESS)
             {
                 numberOfBytesWritten = (int)ioStatusBlock.Information;
@@ -243,32 +243,28 @@ namespace SMBLibrary.Win32
 
         public NTStatus FlushFileBuffers(object handle)
         {
-            IO_STATUS_BLOCK ioStatusBlock;
-            return NtFlushBuffersFile((IntPtr)handle, out ioStatusBlock);
+            return NtFlushBuffersFile((IntPtr)handle, out IO_STATUS_BLOCK ioStatusBlock);
         }
 
         public NTStatus LockFile(object handle, long byteOffset, long length, bool exclusiveLock)
         {
-            IO_STATUS_BLOCK ioStatusBlock;
-            return NtLockFile((IntPtr)handle, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, out ioStatusBlock, ref byteOffset, ref length, 0, true, exclusiveLock);
+            return NtLockFile((IntPtr)handle, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, out IO_STATUS_BLOCK ioStatusBlock, ref byteOffset, ref length, 0, true, exclusiveLock);
         }
 
         public NTStatus UnlockFile(object handle, long byteOffset, long length)
         {
-            IO_STATUS_BLOCK ioStatusBlock;
-            return NtUnlockFile((IntPtr)handle, out ioStatusBlock, ref byteOffset, ref length, 0);
+            return NtUnlockFile((IntPtr)handle, out IO_STATUS_BLOCK ioStatusBlock, ref byteOffset, ref length, 0);
         }
 
         public NTStatus QueryDirectory(out List<QueryDirectoryFileInformation> result, object handle, string fileName, FileInformationClass informationClass)
         {
-            IO_STATUS_BLOCK ioStatusBlock;
             byte[] buffer = new byte[QueryDirectoryBufferSize];
-            UNICODE_STRING fileNameStructure = new UNICODE_STRING(fileName);
-            result = new List<QueryDirectoryFileInformation>();
+            UNICODE_STRING fileNameStructure = new(fileName);
+            result = [];
             bool restartScan = true;
             while (true)
             {
-                NTStatus status = NtQueryDirectoryFile((IntPtr)handle, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, out ioStatusBlock, buffer, (uint)buffer.Length, (byte)informationClass, false, ref fileNameStructure, restartScan);
+                NTStatus status = NtQueryDirectoryFile((IntPtr)handle, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, out IO_STATUS_BLOCK ioStatusBlock, buffer, (uint)buffer.Length, (byte)informationClass, false, ref fileNameStructure, restartScan);
                 if (status == NTStatus.STATUS_NO_MORE_FILES)
                 {
                     break;
@@ -288,9 +284,8 @@ namespace SMBLibrary.Win32
 
         public NTStatus GetFileInformation(out FileInformation result, object handle, FileInformationClass informationClass)
         {
-            IO_STATUS_BLOCK ioStatusBlock;
             byte[] buffer = new byte[FileInformationBufferSize];
-            NTStatus status = NtQueryInformationFile((IntPtr)handle, out ioStatusBlock, buffer, (uint)buffer.Length, (uint)informationClass);
+            NTStatus status = NtQueryInformationFile((IntPtr)handle, out IO_STATUS_BLOCK ioStatusBlock, buffer, (uint)buffer.Length, (uint)informationClass);
             if (status == NTStatus.STATUS_SUCCESS)
             {
                 int numberOfBytesWritten = (int)ioStatusBlock.Information;
@@ -306,64 +301,66 @@ namespace SMBLibrary.Win32
 
         public NTStatus SetFileInformation(object handle, FileInformation information)
         {
-            IO_STATUS_BLOCK ioStatusBlock;
-            if (information is FileRenameInformationType2)
+            if (information is FileRenameInformationType2 fileRenameInformationRemote)
             {
-                FileRenameInformationType2 fileRenameInformationRemote = (FileRenameInformationType2)information;
                 if (ProcessHelper.Is64BitProcess)
                 {
                     // We should not modify the FileRenameInformationType2 instance we received - the caller may use it later.
-                    FileRenameInformationType2 fileRenameInformationLocal = new FileRenameInformationType2();
-                    fileRenameInformationLocal.ReplaceIfExists = fileRenameInformationRemote.ReplaceIfExists;
-                    fileRenameInformationLocal.FileName = ToNativePath(fileRenameInformationRemote.FileName);
+                    FileRenameInformationType2 fileRenameInformationLocal = new()
+                    {
+                        ReplaceIfExists = fileRenameInformationRemote.ReplaceIfExists,
+                        FileName = ToNativePath(fileRenameInformationRemote.FileName)
+                    };
                     information = fileRenameInformationLocal;
                 }
                 else
                 {
                     // Note: WOW64 process should use FILE_RENAME_INFORMATION_TYPE_1.
                     // Note: Server 2003 x64 has issues with using FILE_RENAME_INFORMATION under WOW64.
-                    FileRenameInformationType1 fileRenameInformationLocal = new FileRenameInformationType1();
-                    fileRenameInformationLocal.ReplaceIfExists = fileRenameInformationRemote.ReplaceIfExists;
-                    fileRenameInformationLocal.FileName = ToNativePath(fileRenameInformationRemote.FileName);
+                    FileRenameInformationType1 fileRenameInformationLocal = new()
+                    {
+                        ReplaceIfExists = fileRenameInformationRemote.ReplaceIfExists,
+                        FileName = ToNativePath(fileRenameInformationRemote.FileName)
+                    };
                     information = fileRenameInformationLocal;
                 }
             }
-            else if (information is FileLinkInformationType2)
+            else if (information is FileLinkInformationType2 fileLinkInformationRemote)
             {
-                FileLinkInformationType2 fileLinkInformationRemote = (FileLinkInformationType2)information;
                 if (ProcessHelper.Is64BitProcess)
                 {
-                    FileRenameInformationType2 fileLinkInformationLocal = new FileRenameInformationType2();
-                    fileLinkInformationLocal.ReplaceIfExists = fileLinkInformationRemote.ReplaceIfExists;
-                    fileLinkInformationLocal.FileName = ToNativePath(fileLinkInformationRemote.FileName);
+                    FileRenameInformationType2 fileLinkInformationLocal = new()
+                    {
+                        ReplaceIfExists = fileLinkInformationRemote.ReplaceIfExists,
+                        FileName = ToNativePath(fileLinkInformationRemote.FileName)
+                    };
                     information = fileLinkInformationRemote;
                 }
                 else
                 {
-                    FileLinkInformationType1 fileLinkInformationLocal = new FileLinkInformationType1();
-                    fileLinkInformationLocal.ReplaceIfExists = fileLinkInformationRemote.ReplaceIfExists;
-                    fileLinkInformationLocal.FileName = ToNativePath(fileLinkInformationRemote.FileName);
+                    FileLinkInformationType1 fileLinkInformationLocal = new()
+                    {
+                        ReplaceIfExists = fileLinkInformationRemote.ReplaceIfExists,
+                        FileName = ToNativePath(fileLinkInformationRemote.FileName)
+                    };
                     information = fileLinkInformationRemote;
                 }
             }
             byte[] buffer = information.GetBytes();
-            return NtSetInformationFile((IntPtr)handle, out ioStatusBlock, buffer, (uint)buffer.Length, (uint)information.FileInformationClass);
+            return NtSetInformationFile((IntPtr)handle, out IO_STATUS_BLOCK ioStatusBlock, buffer, (uint)buffer.Length, (uint)information.FileInformationClass);
         }
 
         public NTStatus GetFileSystemInformation(out FileSystemInformation result, FileSystemInformationClass informationClass)
         {
-            IO_STATUS_BLOCK ioStatusBlock;
             byte[] buffer = new byte[FileSystemInformationBufferSize];
-            IntPtr volumeHandle;
-            FileStatus fileStatus;
-            string nativePath = @"\??\" + m_directory.FullName.Substring(0, 3);
-            NTStatus status = CreateFile(out volumeHandle, out fileStatus, nativePath, AccessMask.GENERIC_READ, 0, (FileAttributes)0, ShareAccess.Read, CreateDisposition.FILE_OPEN, (CreateOptions)0);
+            string nativePath = @"\??\" + m_directory.FullName[..3];
+            NTStatus status = CreateFile(out nint volumeHandle, out FileStatus fileStatus, nativePath, AccessMask.GENERIC_READ, 0, (FileAttributes)0, ShareAccess.Read, CreateDisposition.FILE_OPEN, (CreateOptions)0);
             result = null;
             if (status != NTStatus.STATUS_SUCCESS)
             {
                 return status;
             }
-            status = NtQueryVolumeInformationFile((IntPtr)volumeHandle, out ioStatusBlock, buffer, (uint)buffer.Length, (uint)informationClass);
+            status = NtQueryVolumeInformationFile((IntPtr)volumeHandle, out IO_STATUS_BLOCK ioStatusBlock, buffer, (uint)buffer.Length, (uint)informationClass);
             CloseFile(volumeHandle);
             if (status == NTStatus.STATUS_SUCCESS)
             {
@@ -394,9 +391,9 @@ namespace SMBLibrary.Win32
         public NTStatus NotifyChange(out object ioRequest, object handle, NotifyChangeFilter completionFilter, bool watchTree, int outputBufferSize, OnNotifyChangeCompleted onNotifyChangeCompleted, object context)
         {
             byte[] buffer = new byte[outputBufferSize];
-            ManualResetEvent requestAddedEvent = new ManualResetEvent(false);
-            PendingRequest request = new PendingRequest();
-            Thread m_thread = new Thread(delegate()
+            ManualResetEvent requestAddedEvent = new(false);
+            PendingRequest request = new();
+            Task.Run(() =>
             {
                 request.FileHandle = (IntPtr)handle;
                 request.ThreadID = ThreadingHelper.GetCurrentThreadId();
@@ -415,7 +412,7 @@ namespace SMBLibrary.Win32
                     const NTStatus STATUS_ALERTED = (NTStatus)0x00000101;
                     const NTStatus STATUS_OBJECT_TYPE_MISMATCH = (NTStatus)0xC0000024;
 
-                    buffer = new byte[0];
+                    buffer = [];
                     if (status == STATUS_OBJECT_TYPE_MISMATCH)
                     {
                         status = NTStatus.STATUS_INVALID_HANDLE;
@@ -435,7 +432,6 @@ namespace SMBLibrary.Win32
                 onNotifyChangeCompleted(status, buffer, context);
                 m_pendingRequests.Remove((IntPtr)handle, request.ThreadID);
             });
-            m_thread.Start();
 
             // We must wait for the request to be added in order for Cancel to function properly.
             requestAddedEvent.WaitOne();
@@ -466,8 +462,7 @@ namespace SMBLibrary.Win32
             NTStatus status;
             if (Environment.OSVersion.Version.Major >= 6)
             {
-                IO_STATUS_BLOCK ioStatusBlock;
-                status = NtCancelSynchronousIoFile(threadHandle, IntPtr.Zero, out ioStatusBlock);
+                status = NtCancelSynchronousIoFile(threadHandle, IntPtr.Zero, out IO_STATUS_BLOCK ioStatusBlock);
             }
             else
             {
@@ -505,9 +500,8 @@ namespace SMBLibrary.Win32
                 case IoControlCode.FSCTL_QUERY_ALLOCATED_RANGES:
                 case IoControlCode.FSCTL_SET_ZERO_DATA:
                     {
-                        IO_STATUS_BLOCK ioStatusBlock;
                         output = new byte[maxOutputLength];
-                        NTStatus status = NtFsControlFile((IntPtr)handle, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, out ioStatusBlock, ctlCode, input, (uint)input.Length, output, (uint)maxOutputLength);
+                        NTStatus status = NtFsControlFile((IntPtr)handle, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, out IO_STATUS_BLOCK ioStatusBlock, ctlCode, input, (uint)input.Length, output, (uint)maxOutputLength);
                         if (status == NTStatus.STATUS_SUCCESS)
                         {
                             int numberOfBytesWritten = (int)ioStatusBlock.Information;

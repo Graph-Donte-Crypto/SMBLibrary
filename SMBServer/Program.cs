@@ -6,8 +6,8 @@
  */
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
-using System.Windows.Forms;
 
 namespace SMBServer
 {
@@ -19,17 +19,29 @@ namespace SMBServer
         [STAThread]
         static void Main()
         {
-            Application.ThreadException += new ThreadExceptionEventHandler(Application_ThreadException);
             AppDomain.CurrentDomain.UnhandledException += new UnhandledExceptionEventHandler(CurrentDomain_UnhandledException);
 
-            Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new ServerUI());
-        }
+            var ui = new ServerUI();
 
-        public static void Application_ThreadException(object sender, ThreadExceptionEventArgs e)
-        {
-            HandleUnhandledException(e.Exception);
+            ui.chkSMB2.Checked = true;
+            ui.chkSMB1.Checked = true;
+
+            var addresses = ServerUI.GetIPAddresses();
+
+            Console.WriteLine("Choose network interface");
+            foreach (var address in addresses.Select((x, i) => (x,i)))
+            {
+                Console.WriteLine(address.i + " " + address.x.Key);
+            }
+            var str = Console.ReadLine();
+            int number = int.Parse(str);
+
+            ui.Start(addresses[number].Value, SMBLibrary.SMBTransportType.NetBiosOverTCP, true);
+
+            Console.WriteLine("--- HEELOOO THEERE ---");
+            Console.ReadLine();
+
+            ui.Stop();
         }
 
         private static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
@@ -37,15 +49,9 @@ namespace SMBServer
             if (e.ExceptionObject != null)
             {
                 Exception ex = (Exception)e.ExceptionObject;
-                HandleUnhandledException(ex);
+                string message = String.Format("Exception: {0}: {1} Source: {2} {3}", ex.GetType(), ex.Message, ex.Source, ex.StackTrace);
+                Console.WriteLine(message);
             }
-        }
-
-        private static void HandleUnhandledException(Exception ex)
-        {
-            string message = String.Format("Exception: {0}: {1} Source: {2} {3}", ex.GetType(), ex.Message, ex.Source, ex.StackTrace);
-            MessageBox.Show(message, "Error");
-            Application.Exit();
         }
     }
 }

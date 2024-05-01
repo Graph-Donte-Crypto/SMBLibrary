@@ -110,15 +110,12 @@ namespace SMBLibrary.RPC
             uint referentID = ReadUInt32();
             if (referentID != 0) // not null
             {
-                if (structure == null)
-                {
-                    structure = new T();
-                }
+                structure ??= new T();
                 AddDeferredStructure(structure);
             }
             else
             {
-                structure = default(T);
+                structure = default;
             }
         }
 

@@ -21,7 +21,7 @@ namespace SMBLibrary.Server.SMB1
     {
         internal static SMB1Command GetSessionSetupResponse(SMB1Header header, SessionSetupAndXRequest request, GSSProvider securityProvider, SMB1ConnectionState state)
         {
-            SessionSetupAndXResponse response = new SessionSetupAndXResponse();
+            SessionSetupAndXResponse response = new();
             // The PrimaryDomain field in the request is used to determine with domain controller should authenticate the user credentials,
             // However, the domain controller itself does not use this field.
             // See: http://msdn.microsoft.com/en-us/library/windows/desktop/aa378749%28v=vs.85%29.aspx
@@ -33,10 +33,10 @@ namespace SMBLibrary.Server.SMB1
                 return new ErrorResponse(request.CommandName);
             }
 
-            string osVersion = securityProvider.GetContextAttribute(state.AuthenticationContext, GSSAttributeName.OSVersion) as string;
-            byte[] sessionKey = securityProvider.GetContextAttribute(state.AuthenticationContext, GSSAttributeName.SessionKey) as byte[];
-            object accessToken = securityProvider.GetContextAttribute(state.AuthenticationContext, GSSAttributeName.AccessToken);
-            bool? isGuest = securityProvider.GetContextAttribute(state.AuthenticationContext, GSSAttributeName.IsGuest) as bool?;
+            string osVersion = state.AuthenticationContext.GetContextAttribute(GSSAttributeName.OSVersion) as string;
+            byte[] sessionKey = state.AuthenticationContext.GetContextAttribute(GSSAttributeName.SessionKey) as byte[];
+            object accessToken = state.AuthenticationContext.GetContextAttribute(GSSAttributeName.AccessToken);
+            bool? isGuest = state.AuthenticationContext.GetContextAttribute(GSSAttributeName.IsGuest) as bool?;
 
             if (sessionKey != null && sessionKey.Length > 16)
             {
@@ -81,17 +81,16 @@ namespace SMBLibrary.Server.SMB1
 
         internal static SMB1Command GetSessionSetupResponseExtended(SMB1Header header, SessionSetupAndXRequestExtended request, GSSProvider securityProvider, SMB1ConnectionState state)
         {
-            SessionSetupAndXResponseExtended response = new SessionSetupAndXResponseExtended();
+            SessionSetupAndXResponseExtended response = new();
 
             // [MS-SMB] The Windows GSS implementation supports raw Kerberos / NTLM messages in the SecurityBlob
-            byte[] outputToken;
-            NTStatus status = securityProvider.AcceptSecurityContext(ref state.AuthenticationContext, request.SecurityBlob, out outputToken);
+            NTStatus status = securityProvider.AcceptSecurityContext(ref state.AuthenticationContext, request.SecurityBlob, out byte[] outputToken);
             if (status != NTStatus.STATUS_SUCCESS && status != NTStatus.SEC_I_CONTINUE_NEEDED)
             {
-                string userName = securityProvider.GetContextAttribute(state.AuthenticationContext, GSSAttributeName.UserName) as string;
-                string domainName = securityProvider.GetContextAttribute(state.AuthenticationContext, GSSAttributeName.DomainName) as string;
-                string machineName = securityProvider.GetContextAttribute(state.AuthenticationContext, GSSAttributeName.MachineName) as string;
-                string osVersion = securityProvider.GetContextAttribute(state.AuthenticationContext, GSSAttributeName.OSVersion) as string;
+                string userName = state.AuthenticationContext.GetContextAttribute(GSSAttributeName.UserName) as string;
+                string domainName = state.AuthenticationContext.GetContextAttribute(GSSAttributeName.DomainName) as string;
+                string machineName = state.AuthenticationContext.GetContextAttribute(GSSAttributeName.MachineName) as string;
+                string osVersion = state.AuthenticationContext.GetContextAttribute(GSSAttributeName.OSVersion) as string;
                 state.LogToServer(Severity.Information, "Session Setup: User '{0}' failed authentication (Domain: '{1}', Workstation: '{2}', OS version: '{3}'), NTStatus: {4}", userName, domainName, machineName, osVersion, status);
                 header.Status = status;
                 return new ErrorResponse(request.CommandName);
@@ -120,13 +119,13 @@ namespace SMBLibrary.Server.SMB1
             }
             else // header.Status == NTStatus.STATUS_SUCCESS
             {
-                string userName = securityProvider.GetContextAttribute(state.AuthenticationContext, GSSAttributeName.UserName) as string;
-                string domainName = securityProvider.GetContextAttribute(state.AuthenticationContext, GSSAttributeName.DomainName) as string;
-                string machineName = securityProvider.GetContextAttribute(state.AuthenticationContext, GSSAttributeName.MachineName) as string;
-                string osVersion = securityProvider.GetContextAttribute(state.AuthenticationContext, GSSAttributeName.OSVersion) as string;
-                byte[] sessionKey = securityProvider.GetContextAttribute(state.AuthenticationContext, GSSAttributeName.SessionKey) as byte[];
-                object accessToken = securityProvider.GetContextAttribute(state.AuthenticationContext, GSSAttributeName.AccessToken);
-                bool? isGuest = securityProvider.GetContextAttribute(state.AuthenticationContext, GSSAttributeName.IsGuest) as bool?;
+                string userName = state.AuthenticationContext.GetContextAttribute(GSSAttributeName.UserName) as string;
+                string domainName = state.AuthenticationContext.GetContextAttribute(GSSAttributeName.DomainName) as string;
+                string machineName = state.AuthenticationContext.GetContextAttribute(GSSAttributeName.MachineName) as string;
+                string osVersion = state.AuthenticationContext.GetContextAttribute(GSSAttributeName.OSVersion) as string;
+                byte[] sessionKey = state.AuthenticationContext.GetContextAttribute(GSSAttributeName.SessionKey) as byte[];
+                object accessToken = state.AuthenticationContext.GetContextAttribute(GSSAttributeName.AccessToken);
+                bool? isGuest = state.AuthenticationContext.GetContextAttribute(GSSAttributeName.IsGuest) as bool?;
 
                 if (sessionKey != null && sessionKey.Length > 16)
                 {
@@ -154,15 +153,21 @@ namespace SMBLibrary.Server.SMB1
 
         private static AuthenticateMessage CreateAuthenticateMessage(string accountNameToAuth, byte[] lmChallengeResponse, byte[] ntChallengeResponse)
         {
-            AuthenticateMessage authenticateMessage = new AuthenticateMessage();
-            authenticateMessage.NegotiateFlags = NegotiateFlags.UnicodeEncoding |
+            AuthenticateMessage authenticateMessage = new()
+            {
+                NegotiateFlags = NegotiateFlags.UnicodeEncoding |
                                                  NegotiateFlags.OEMEncoding |
                                                  NegotiateFlags.Sign |
                                                  NegotiateFlags.NTLMSessionSecurity |
                                                  NegotiateFlags.AlwaysSign |
                                                  NegotiateFlags.Version |
                                                  NegotiateFlags.Use128BitEncryption |
-                                                 NegotiateFlags.Use56BitEncryption;
+                                                 NegotiateFlags.Use56BitEncryption,
+                UserName = accountNameToAuth,
+                LmChallengeResponse = lmChallengeResponse,
+                NtChallengeResponse = ntChallengeResponse,
+                Version = NTLMVersion.Server2003
+            };
             if (AuthenticationMessageUtils.IsNTLMv1ExtendedSessionSecurity(lmChallengeResponse) ||
                 AuthenticationMessageUtils.IsNTLMv2NTResponse(ntChallengeResponse))
             {
@@ -172,10 +177,7 @@ namespace SMBLibrary.Server.SMB1
             {
                 authenticateMessage.NegotiateFlags |= NegotiateFlags.LanManagerSessionKey;
             }
-            authenticateMessage.UserName = accountNameToAuth;
-            authenticateMessage.LmChallengeResponse = lmChallengeResponse;
-            authenticateMessage.NtChallengeResponse = ntChallengeResponse;
-            authenticateMessage.Version = NTLMVersion.Server2003;
+            
             return authenticateMessage;
         }
     }

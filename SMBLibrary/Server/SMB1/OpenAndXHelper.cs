@@ -21,7 +21,7 @@ namespace SMBLibrary.Server.SMB1
             SMB1Session session = state.GetSession(header.UID);
             bool isExtended = (request.Flags & OpenFlags.SMB_OPEN_EXTENDED_RESPONSE) > 0;
             string path = request.FileName;
-            if (!path.StartsWith(@"\"))
+            if (!path.StartsWith('\\'))
             {
                 path = @"\" + path;
             }
@@ -44,19 +44,14 @@ namespace SMBLibrary.Server.SMB1
             CreateOptions createOptions = ToCreateOptions(request.AccessMode);
 
             FileAccess createAccess = NTFileStoreHelper.ToCreateFileAccess(desiredAccess, createDisposition);
-            if (share is FileSystemShare)
+            if (!share.HasAccess(session.SecurityContext, path, createAccess))
             {
-                if (!((FileSystemShare)share).HasAccess(session.SecurityContext, path, createAccess))
-                {
-                    state.LogToServer(Severity.Verbose, "OpenAndX: Opening '{0}{1}' failed. User '{2}' was denied access.", share.Name, request.FileName, session.UserName);
-                    header.Status = NTStatus.STATUS_ACCESS_DENIED;
-                    return new ErrorResponse(request.CommandName);
-                }
+                state.LogToServer(Severity.Verbose, "OpenAndX: Opening '{0}{1}' failed. User '{2}' was denied access.", share.Name, request.FileName, session.UserName);
+                header.Status = NTStatus.STATUS_ACCESS_DENIED;
+                return new ErrorResponse(request.CommandName);
             }
 
-            object handle;
-            FileStatus fileStatus;
-            header.Status = share.FileStore.CreateFile(out handle, out fileStatus, path, desiredAccess, 0, shareAccess, createDisposition, createOptions, session.SecurityContext);
+            header.Status = share.FileStore.CreateFile(out object handle, out FileStatus fileStatus, path, desiredAccess, 0, shareAccess, createDisposition, createOptions, session.SecurityContext);
             if (header.Status != NTStatus.STATUS_SUCCESS)
             {
                 state.LogToServer(Severity.Verbose, "OpenAndX: Opening '{0}{1}' failed. NTStatus: {2}.", share.Name, path, header.Status);
@@ -86,7 +81,7 @@ namespace SMBLibrary.Server.SMB1
                     return CreateResponseForNamedPipe(fileID.Value, openResult);
                 }
             }
-            else // FileSystemShare
+            else if (share is FileSystemShare)
             {
                 FileNetworkOpenInformation fileInfo = NTFileStoreHelper.GetNetworkOpenInformation(share.FileStore, handle);
                 if (isExtended)
@@ -98,6 +93,7 @@ namespace SMBLibrary.Server.SMB1
                     return CreateResponseFromFileInfo(fileInfo, fileID.Value, openResult);
                 }
             }
+            else throw new NotImplementedException();
         }
 
         private static AccessMask ToAccessMask(AccessMode accessMode)
@@ -255,10 +251,12 @@ namespace SMBLibrary.Server.SMB1
 
         private static OpenAndXResponse CreateResponseForNamedPipe(ushort fileID, OpenResult openResult)
         {
-            OpenAndXResponse response = new OpenAndXResponse();
-            response.FID = fileID;
-            response.AccessRights = AccessRights.SMB_DA_ACCESS_READ_WRITE;
-            response.ResourceType = ResourceType.FileTypeMessageModePipe;
+            OpenAndXResponse response = new()
+            {
+                FID = fileID,
+                AccessRights = AccessRights.SMB_DA_ACCESS_READ_WRITE,
+                ResourceType = ResourceType.FileTypeMessageModePipe
+            };
             response.NMPipeStatus.ICount = 255;
             response.NMPipeStatus.ReadMode = ReadMode.MessageMode;
             response.NMPipeStatus.NamedPipeType = NamedPipeType.MessageModePipe;
@@ -268,10 +266,12 @@ namespace SMBLibrary.Server.SMB1
 
         private static OpenAndXResponseExtended CreateResponseExtendedForNamedPipe(ushort fileID, OpenResult openResult)
         {
-            OpenAndXResponseExtended response = new OpenAndXResponseExtended();
-            response.FID = fileID;
-            response.AccessRights = AccessRights.SMB_DA_ACCESS_READ_WRITE;
-            response.ResourceType = ResourceType.FileTypeMessageModePipe;
+            OpenAndXResponseExtended response = new()
+            {
+                FID = fileID,
+                AccessRights = AccessRights.SMB_DA_ACCESS_READ_WRITE,
+                ResourceType = ResourceType.FileTypeMessageModePipe
+            };
             response.NMPipeStatus.ICount = 255;
             response.NMPipeStatus.ReadMode = ReadMode.MessageMode;
             response.NMPipeStatus.NamedPipeType = NamedPipeType.MessageModePipe;
@@ -281,26 +281,30 @@ namespace SMBLibrary.Server.SMB1
 
         private static OpenAndXResponse CreateResponseFromFileInfo(FileNetworkOpenInformation fileInfo, ushort fileID, OpenResult openResult)
         {
-            OpenAndXResponse response = new OpenAndXResponse();
-            response.FID = fileID;
-            response.FileAttrs = SMB1FileStoreHelper.GetFileAttributes(fileInfo.FileAttributes);
-            response.LastWriteTime = fileInfo.LastWriteTime;
-            response.FileDataSize = (uint)Math.Min(UInt32.MaxValue, fileInfo.EndOfFile);
-            response.AccessRights = AccessRights.SMB_DA_ACCESS_READ;
-            response.ResourceType = ResourceType.FileTypeDisk;
+            OpenAndXResponse response = new()
+            {
+                FID = fileID,
+                FileAttrs = SMB1FileStoreHelper.GetFileAttributes(fileInfo.FileAttributes),
+                LastWriteTime = fileInfo.LastWriteTime,
+                FileDataSize = (uint)Math.Min(UInt32.MaxValue, fileInfo.EndOfFile),
+                AccessRights = AccessRights.SMB_DA_ACCESS_READ,
+                ResourceType = ResourceType.FileTypeDisk
+            };
             response.OpenResults.OpenResult = openResult;
             return response;
         }
 
         private static OpenAndXResponseExtended CreateResponseExtendedFromFileInfo(FileNetworkOpenInformation fileInfo, ushort fileID, OpenResult openResult)
         {
-            OpenAndXResponseExtended response = new OpenAndXResponseExtended();
-            response.FID = fileID;
-            response.FileAttrs = SMB1FileStoreHelper.GetFileAttributes(fileInfo.FileAttributes);
-            response.LastWriteTime = fileInfo.LastWriteTime;
-            response.FileDataSize = (uint)Math.Min(UInt32.MaxValue, fileInfo.EndOfFile);
-            response.AccessRights = AccessRights.SMB_DA_ACCESS_READ;
-            response.ResourceType = ResourceType.FileTypeDisk;
+            OpenAndXResponseExtended response = new()
+            {
+                FID = fileID,
+                FileAttrs = SMB1FileStoreHelper.GetFileAttributes(fileInfo.FileAttributes),
+                LastWriteTime = fileInfo.LastWriteTime,
+                FileDataSize = (uint)Math.Min(UInt32.MaxValue, fileInfo.EndOfFile),
+                AccessRights = AccessRights.SMB_DA_ACCESS_READ,
+                ResourceType = ResourceType.FileTypeDisk
+            };
             response.OpenResults.OpenResult = openResult;
             response.MaximalAccessRights = (AccessMask)(FileAccessMask.FILE_READ_DATA | FileAccessMask.FILE_WRITE_DATA | FileAccessMask.FILE_APPEND_DATA |
                                                         FileAccessMask.FILE_READ_EA | FileAccessMask.FILE_WRITE_EA |

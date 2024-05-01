@@ -70,13 +70,10 @@ namespace SMBLibrary.Win32.Security
 
         public static List<string> EnumerateGroups(string userName)
         {
-            List<string> result = new List<string>();
-            uint entriesRead;
-            uint totalEntries;
-            IntPtr bufPtr;
+            List<string> result = [];
 
             uint level = 0;
-            uint status = NetUserGetLocalGroups(null, userName, level, 0, out bufPtr, MAX_PREFERRED_LENGTH, out entriesRead, out totalEntries);
+            uint status = NetUserGetLocalGroups(null, userName, level, 0, out nint bufPtr, MAX_PREFERRED_LENGTH, out uint entriesRead, out uint totalEntries);
             if (status != NERR_Success)
             {
                 throw new Exception("NetUserGetLocalGroups failed, Error code: " + status.ToString());
@@ -100,14 +97,10 @@ namespace SMBLibrary.Win32.Security
 
         public static List<string> EnumerateAllUsers()
         {
-            List<string> result = new List<string>();
-            uint entriesRead;
-            uint totalEntries;
-            uint resume;
+            List<string> result = [];
 
-            IntPtr bufPtr;
             uint level = 0;
-            uint status = NetUserEnum(null, level, FILTER_NORMAL_ACCOUNT, out bufPtr, MAX_PREFERRED_LENGTH, out entriesRead, out totalEntries, out resume);
+            uint status = NetUserEnum(null, level, FILTER_NORMAL_ACCOUNT, out nint bufPtr, MAX_PREFERRED_LENGTH, out uint entriesRead, out uint totalEntries, out uint resume);
             if (status != NERR_Success)
             {
                 throw new Exception("NetUserEnum failed, Error code: " + status.ToString());
@@ -130,14 +123,10 @@ namespace SMBLibrary.Win32.Security
 
         public static List<string> EnumerateEnabledUsers()
         {
-            List<string> result = new List<string>();
-            uint entriesRead;
-            uint totalEntries;
-            uint resume;
+            List<string> result = [];
 
-            IntPtr bufPtr;
             uint level = 1;
-            uint status = NetUserEnum(null, level, FILTER_NORMAL_ACCOUNT, out bufPtr, MAX_PREFERRED_LENGTH, out entriesRead, out totalEntries, out resume);
+            uint status = NetUserEnum(null, level, FILTER_NORMAL_ACCOUNT, out nint bufPtr, MAX_PREFERRED_LENGTH, out uint entriesRead, out uint totalEntries, out uint resume);
             if (status != NERR_Success)
             {
                 throw new Exception("NetUserEnum failed, Error code: " + status.ToString());
@@ -164,8 +153,7 @@ namespace SMBLibrary.Win32.Security
         public static bool IsUserExists(string userName)
         {
             uint level = 0;
-            IntPtr bufPtr;
-            uint result = NetUserGetInfo(null, userName, level, out bufPtr);
+            uint result = NetUserGetInfo(null, userName, level, out nint bufPtr);
             if (result == NERR_Success)
             {
                 NetApiBufferFree(bufPtr);
@@ -183,7 +171,7 @@ namespace SMBLibrary.Win32.Security
 
         public static List<string> EnumerateNetworkUsers()
         {
-            List<string> result = new List<string>();
+            List<string> result = [];
             List<string> users = EnumerateEnabledUsers();
             foreach (string userName in users)
             {

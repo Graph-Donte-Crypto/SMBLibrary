@@ -40,7 +40,7 @@ namespace SMBServer
 
         public List<string> ListUsers()
         {
-            List<string> result = new List<string>();
+            List<string> result = [];
             foreach (User user in this)
             {
                 result.Add(user.AccountName);

@@ -180,8 +180,7 @@ namespace SMBLibrary.Win32.Security
 
         public static string GetUserName(SecHandle context)
         {
-            string userName;
-            uint result = QueryContextAttributes(ref context, SECPKG_ATTR_NAME, out userName);
+            uint result = QueryContextAttributes(ref context, SECPKG_ATTR_NAME, out string userName);
             if (result == SEC_E_OK)
             {
                 return userName;
@@ -198,8 +197,7 @@ namespace SMBLibrary.Win32.Security
         /// </summary>
         public static byte[] GetSessionKey(SecHandle context)
         {
-            SecPkgContext_SessionKey sessionKey;
-            uint result = QueryContextAttributes(ref context, SECPKG_ATTR_SESSION_KEY, out sessionKey);
+            uint result = QueryContextAttributes(ref context, SECPKG_ATTR_SESSION_KEY, out SecPkgContext_SessionKey sessionKey);
             if (result == SEC_E_OK)
             {
                 int length = (int)sessionKey.SessionKeyLength;
@@ -215,8 +213,7 @@ namespace SMBLibrary.Win32.Security
 
         public static IntPtr GetAccessToken(SecHandle serverContext)
         {
-            IntPtr accessToken;
-            uint result = QueryContextAttributes(ref serverContext, SECPKG_ATTR_ACCESS_TOKEN, out accessToken);
+            uint result = QueryContextAttributes(ref serverContext, SECPKG_ATTR_ACCESS_TOKEN, out nint accessToken);
             if (result == SEC_E_OK)
             {
                 return accessToken;
@@ -229,14 +226,16 @@ namespace SMBLibrary.Win32.Security
 
         private static SEC_WINNT_AUTH_IDENTITY GetWinNTAuthIdentity(string domainName, string userName, string password)
         {
-            SEC_WINNT_AUTH_IDENTITY auth = new SEC_WINNT_AUTH_IDENTITY();
-            auth.Domain = domainName;
-            auth.DomainLength = (uint)domainName.Length;
-            auth.User = userName;
-            auth.UserLength = (uint)userName.Length;
-            auth.Password = password;
-            auth.PasswordLength = (uint)password.Length;
-            auth.Flags = SEC_WINNT_AUTH_IDENTITY_ANSI;
+            SEC_WINNT_AUTH_IDENTITY auth = new()
+            {
+                Domain = domainName,
+                DomainLength = (uint)domainName.Length,
+                User = userName,
+                UserLength = (uint)userName.Length,
+                Password = password,
+                PasswordLength = (uint)password.Length,
+                Flags = SEC_WINNT_AUTH_IDENTITY_ANSI
+            };
             return auth;
         }
     }

@@ -16,23 +16,16 @@ namespace SMBLibrary.SMB1
         /// <exception cref="SMBLibrary.UnsupportedInformationLevelException"></exception>
         public static FileInformationClass ToFileInformationClass(FindInformationLevel informationLevel)
         {
-            switch (informationLevel)
+            return informationLevel switch
             {
-                case FindInformationLevel.SMB_FIND_FILE_DIRECTORY_INFO:
-                    return FileInformationClass.FileDirectoryInformation;
-                case FindInformationLevel.SMB_FIND_FILE_FULL_DIRECTORY_INFO:
-                    return FileInformationClass.FileFullDirectoryInformation;
-                case FindInformationLevel.SMB_FIND_FILE_NAMES_INFO:
-                    return FileInformationClass.FileNamesInformation;
-                case FindInformationLevel.SMB_FIND_FILE_BOTH_DIRECTORY_INFO:
-                    return FileInformationClass.FileBothDirectoryInformation;
-                case FindInformationLevel.SMB_FIND_FILE_ID_FULL_DIRECTORY_INFO:
-                    return FileInformationClass.FileIdFullDirectoryInformation;
-                case FindInformationLevel.SMB_FIND_FILE_ID_BOTH_DIRECTORY_INFO:
-                    return FileInformationClass.FileIdBothDirectoryInformation;
-                default:
-                    throw new UnsupportedInformationLevelException();
-            }
+                FindInformationLevel.SMB_FIND_FILE_DIRECTORY_INFO => FileInformationClass.FileDirectoryInformation,
+                FindInformationLevel.SMB_FIND_FILE_FULL_DIRECTORY_INFO => FileInformationClass.FileFullDirectoryInformation,
+                FindInformationLevel.SMB_FIND_FILE_NAMES_INFO => FileInformationClass.FileNamesInformation,
+                FindInformationLevel.SMB_FIND_FILE_BOTH_DIRECTORY_INFO => FileInformationClass.FileBothDirectoryInformation,
+                FindInformationLevel.SMB_FIND_FILE_ID_FULL_DIRECTORY_INFO => FileInformationClass.FileIdFullDirectoryInformation,
+                FindInformationLevel.SMB_FIND_FILE_ID_BOTH_DIRECTORY_INFO => FileInformationClass.FileIdBothDirectoryInformation,
+                _ => throw new UnsupportedInformationLevelException(),
+            };
         }
 
         /// <exception cref="SMBLibrary.UnsupportedInformationLevelException"></exception>

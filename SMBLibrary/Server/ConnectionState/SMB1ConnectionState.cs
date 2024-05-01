@@ -18,15 +18,15 @@ namespace SMBLibrary.Server
         public bool LargeWrite;
 
         // Key is UID
-        private Dictionary<ushort, SMB1Session> m_sessions = new Dictionary<ushort, SMB1Session>();
+        private readonly Dictionary<ushort, SMB1Session> m_sessions = [];
         private ushort m_nextUID = 1; // UID MUST be unique within an SMB connection
         private ushort m_nextTID = 1; // TID MUST be unique within an SMB connection
         private ushort m_nextFID = 1; // FID MUST be unique within an SMB connection
 
         // Key is PID (PID MUST be unique within an SMB connection)
-        private Dictionary<uint, ProcessStateObject> m_processStateList = new Dictionary<uint, ProcessStateObject>();
+        private readonly Dictionary<uint, ProcessStateObject> m_processStateList = [];
         
-        private List<SMB1AsyncContext> m_pendingRequests = new List<SMB1AsyncContext>();
+        private readonly List<SMB1AsyncContext> m_pendingRequests = [];
 
         public SMB1ConnectionState(ConnectionState state) : base(state)
         {
@@ -56,7 +56,7 @@ namespace SMBLibrary.Server
 
         public SMB1Session CreateSession(ushort userID, string userName, string machineName, byte[] sessionKey, object accessToken)
         {
-            SMB1Session session = new SMB1Session(this, userID, userName, machineName, sessionKey, accessToken);
+            SMB1Session session = new(this, userID, userName, machineName, sessionKey, accessToken);
             lock (m_sessions)
             {
                 m_sessions.Add(userID, session);
@@ -77,15 +77,13 @@ namespace SMBLibrary.Server
 
         public SMB1Session GetSession(ushort userID)
         {
-            SMB1Session session;
-            m_sessions.TryGetValue(userID, out session);
+            m_sessions.TryGetValue(userID, out SMB1Session session);
             return session;
         }
 
         public void RemoveSession(ushort userID)
         {
-            SMB1Session session;
-            m_sessions.TryGetValue(userID, out session);
+            m_sessions.TryGetValue(userID, out SMB1Session session);
             if (session != null)
             {
                 session.Close();
@@ -111,7 +109,7 @@ namespace SMBLibrary.Server
 
         public override List<SessionInformation> GetSessionsInformation()
         {
-            List<SessionInformation> result = new List<SessionInformation>();
+            List<SessionInformation> result = [];
             lock (m_sessions)
             {
                 foreach (SMB1Session session in m_sessions.Values)
@@ -193,16 +191,16 @@ namespace SMBLibrary.Server
 
         public ProcessStateObject CreateProcessState(uint processID)
         {
-            ProcessStateObject processState = new ProcessStateObject();
+            ProcessStateObject processState = new();
             m_processStateList[processID] = processState;
             return processState;
         }
 
         public ProcessStateObject GetProcessState(uint processID)
         {
-            if (m_processStateList.ContainsKey(processID))
+            if (m_processStateList.TryGetValue(processID, out ProcessStateObject value))
             {
-                return m_processStateList[processID];
+                return value;
             }
             else
             {
@@ -217,13 +215,15 @@ namespace SMBLibrary.Server
 
         public SMB1AsyncContext CreateAsyncContext(ushort userID, ushort treeID, uint processID, ushort multiplexID, ushort fileID, SMB1ConnectionState connection)
         {
-            SMB1AsyncContext context = new SMB1AsyncContext();
-            context.UID = userID;
-            context.TID = treeID;
-            context.MID = multiplexID;
-            context.PID = processID;
-            context.FileID = fileID;
-            context.Connection = connection;
+            SMB1AsyncContext context = new()
+            {
+                UID = userID,
+                TID = treeID,
+                MID = multiplexID,
+                PID = processID,
+                FileID = fileID,
+                Connection = connection
+            };
             lock (m_pendingRequests)
             {
                 m_pendingRequests.Add(context);

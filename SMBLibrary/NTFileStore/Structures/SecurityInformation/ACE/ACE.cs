@@ -26,15 +26,12 @@ namespace SMBLibrary
         public static ACE GetAce(byte[] buffer, int offset)
         {
             AceType aceType = (AceType)ByteReader.ReadByte(buffer, offset + 0);
-            switch (aceType)
+            return aceType switch
             {
-                case AceType.ACCESS_ALLOWED_ACE_TYPE:
-                    return new AccessAllowedACE(buffer, offset);
-                case AceType.ACCESS_DENIED_ACE_TYPE:
-                    return new AccessDeniedACE(buffer, offset);
-                default:
-                    throw new NotImplementedException();
-            }
+                AceType.ACCESS_ALLOWED_ACE_TYPE => new AccessAllowedACE(buffer, offset),
+                AceType.ACCESS_DENIED_ACE_TYPE => new AccessDeniedACE(buffer, offset),
+                _ => throw new NotImplementedException(),
+            };
         }
     }
 }

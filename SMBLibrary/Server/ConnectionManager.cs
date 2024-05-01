@@ -13,7 +13,7 @@ namespace SMBLibrary.Server
 {
     internal class ConnectionManager
     {
-        private List<ConnectionState> m_activeConnections = new List<ConnectionState>();
+        private readonly List<ConnectionState> m_activeConnections = [];
 
         public void AddConnection(ConnectionState connection)
         {
@@ -61,7 +61,7 @@ namespace SMBLibrary.Server
         /// </summary>
         public void SendSMBKeepAlive(TimeSpan inactivityDuration)
         {
-            List<ConnectionState> connections = new List<ConnectionState>(m_activeConnections);
+            List<ConnectionState> connections = new(m_activeConnections);
             foreach (ConnectionState connection in connections)
             {
                 if (connection.LastReceiveDT.Add(inactivityDuration) < DateTime.UtcNow &&
@@ -85,7 +85,7 @@ namespace SMBLibrary.Server
 
         public void ReleaseAllConnections()
         {
-            List<ConnectionState> connections = new List<ConnectionState>(m_activeConnections);
+            List<ConnectionState> connections = new(m_activeConnections);
             foreach (ConnectionState connection in connections)
             {
                 ReleaseConnection(connection);
@@ -109,7 +109,7 @@ namespace SMBLibrary.Server
 
         public List<SessionInformation> GetSessionsInformation()
         {
-            List<SessionInformation> result = new List<SessionInformation>();
+            List<SessionInformation> result = [];
             lock (m_activeConnections)
             {
                 foreach (ConnectionState connection in m_activeConnections)

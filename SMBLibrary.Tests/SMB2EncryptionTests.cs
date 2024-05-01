@@ -68,8 +68,7 @@ namespace SMBLibrary.Tests
 
             byte[] expectedSignature = new byte[] { 0x81, 0xA2, 0x86, 0x53, 0x54, 0x15, 0x44, 0x5D, 0xAE, 0x39, 0x39, 0x21, 0xE4, 0x4F, 0xA4, 0x2E };
 
-            byte[] signature;
-            byte[] encryptedMessage = SMB2Cryptography.EncryptMessage(encryptionKey, nonce, message, sessionID, out signature);
+            byte[] encryptedMessage = SMB2Cryptography.EncryptMessage(encryptionKey, nonce, message, sessionID, out byte[] signature);
 
             Assert.IsTrue(ByteUtils.AreByteArraysEqual(expectedEncrypted, encryptedMessage));
             // The associated data in this sample include non-zero nonce padding so we ignore signature validation

@@ -26,17 +26,13 @@ namespace SMBLibrary.Server.SMB2
                     return new ErrorResponse(request.CommandName, NTStatus.STATUS_FILE_CLOSED);
                 }
 
-                if (share is FileSystemShare)
+                if (!share.HasAccess(session.SecurityContext, openFile.Path, System.IO.FileAccess.Read))
                 {
-                    if (!((FileSystemShare)share).HasReadAccess(session.SecurityContext, openFile.Path))
-                    {
-                        state.LogToServer(Severity.Verbose, "GetFileInformation on '{0}{1}' failed. User '{2}' was denied access.", share.Name, openFile.Path, session.UserName);
-                        return new ErrorResponse(request.CommandName, NTStatus.STATUS_ACCESS_DENIED);
-                    }
+                    state.LogToServer(Severity.Verbose, "GetFileInformation on '{0}{1}' failed. User '{2}' was denied access.", share.Name, openFile.Path, session.UserName);
+                    return new ErrorResponse(request.CommandName, NTStatus.STATUS_ACCESS_DENIED);
                 }
 
-                FileInformation fileInformation;
-                NTStatus queryStatus = share.FileStore.GetFileInformation(out fileInformation, openFile.Handle, request.FileInformationClass);
+                NTStatus queryStatus = share.FileStore.GetFileInformation(out FileInformation fileInformation, openFile.Handle, request.FileInformationClass);
                 if (queryStatus != NTStatus.STATUS_SUCCESS)
                 {
                     state.LogToServer(Severity.Verbose, "GetFileInformation on '{0}{1}' failed. Information class: {2}, NTStatus: {3}. (FileId: {4})", share.Name, openFile.Path, request.FileInformationClass, queryStatus, request.FileId.Volatile);
@@ -44,7 +40,7 @@ namespace SMBLibrary.Server.SMB2
                 }
 
                 state.LogToServer(Severity.Information, "GetFileInformation on '{0}{1}' succeeded. Information class: {2}. (FileId: {3})", share.Name, openFile.Path, request.FileInformationClass, request.FileId.Volatile);
-                QueryInfoResponse response = new QueryInfoResponse();
+                QueryInfoResponse response = new();
                 response.SetFileInformation(fileInformation);
                 if (response.OutputBuffer.Length > request.OutputBufferLength)
                 {
@@ -57,14 +53,13 @@ namespace SMBLibrary.Server.SMB2
             {
                 if (share is FileSystemShare)
                 {
-                    if (!((FileSystemShare)share).HasReadAccess(session.SecurityContext, @"\"))
+                    if (!share.HasAccess(session.SecurityContext, @"\", System.IO.FileAccess.Read))
                     {
                         state.LogToServer(Severity.Verbose, "GetFileSystemInformation on '{0}' failed. User '{1}' was denied access.", share.Name, session.UserName);
                         return new ErrorResponse(request.CommandName, NTStatus.STATUS_ACCESS_DENIED);
                     }
 
-                    FileSystemInformation fileSystemInformation;
-                    NTStatus queryStatus = share.FileStore.GetFileSystemInformation(out fileSystemInformation, request.FileSystemInformationClass);
+                    NTStatus queryStatus = share.FileStore.GetFileSystemInformation(out FileSystemInformation fileSystemInformation, request.FileSystemInformationClass);
                     if (queryStatus != NTStatus.STATUS_SUCCESS)
                     {
                         state.LogToServer(Severity.Verbose, "GetFileSystemInformation on '{0}' failed. Information class: {1}, NTStatus: {2}", share.Name, request.FileSystemInformationClass, queryStatus);
@@ -72,7 +67,7 @@ namespace SMBLibrary.Server.SMB2
                     }
 
                     state.LogToServer(Severity.Information, "GetFileSystemInformation on '{0}' succeeded. Information class: {1}", share.Name, request.FileSystemInformationClass);
-                    QueryInfoResponse response = new QueryInfoResponse();
+                    QueryInfoResponse response = new();
                     response.SetFileSystemInformation(fileSystemInformation);
                     if (response.OutputBuffer.Length > request.OutputBufferLength)
                     {
@@ -92,17 +87,13 @@ namespace SMBLibrary.Server.SMB2
                     return new ErrorResponse(request.CommandName, NTStatus.STATUS_FILE_CLOSED);
                 }
 
-                if (share is FileSystemShare)
+                if (!share.HasAccess(session.SecurityContext, openFile.Path, System.IO.FileAccess.Read))
                 {
-                    if (!((FileSystemShare)share).HasReadAccess(session.SecurityContext, openFile.Path))
-                    {
-                        state.LogToServer(Severity.Verbose, "GetSecurityInformation on '{0}{1}' failed. User '{2}' was denied access.", share.Name, openFile.Path, session.UserName);
-                        return new ErrorResponse(request.CommandName, NTStatus.STATUS_ACCESS_DENIED);
-                    }
+                    state.LogToServer(Severity.Verbose, "GetSecurityInformation on '{0}{1}' failed. User '{2}' was denied access.", share.Name, openFile.Path, session.UserName);
+                    return new ErrorResponse(request.CommandName, NTStatus.STATUS_ACCESS_DENIED);
                 }
 
-                SecurityDescriptor securityDescriptor;
-                NTStatus queryStatus = share.FileStore.GetSecurityInformation(out securityDescriptor, openFile.Handle, request.SecurityInformation);
+                NTStatus queryStatus = share.FileStore.GetSecurityInformation(out SecurityDescriptor securityDescriptor, openFile.Handle, request.SecurityInformation);
                 if (queryStatus != NTStatus.STATUS_SUCCESS)
                 {
                     state.LogToServer(Severity.Verbose, "GetSecurityInformation on '{0}{1}' failed. Security information: 0x{2}, NTStatus: {3}. (FileId: {4})", share.Name, openFile.Path, request.SecurityInformation.ToString("X"), queryStatus, request.FileId.Volatile);
@@ -117,7 +108,7 @@ namespace SMBLibrary.Server.SMB2
                 }
 
                 state.LogToServer(Severity.Information, "GetSecurityInformation on '{0}{1}' succeeded. Security information: 0x{2}. (FileId: {3})", share.Name, openFile.Path, request.SecurityInformation.ToString("X"), request.FileId.Volatile);
-                QueryInfoResponse response = new QueryInfoResponse();
+                QueryInfoResponse response = new();
                 response.SetSecurityInformation(securityDescriptor);
                 return response;
             }

@@ -16,9 +16,8 @@ namespace SMBLibrary.Adapters
         public NTStatus SetFileInformation(object handle, FileInformation information)
         {
             FileHandle fileHandle = (FileHandle)handle;
-            if (information is FileBasicInformation)
+            if (information is FileBasicInformation basicInformation)
             {
-                FileBasicInformation basicInformation = (FileBasicInformation)information;
                 bool isHidden = ((basicInformation.FileAttributes & FileAttributes.Hidden) > 0);
                 bool isReadonly = (basicInformation.FileAttributes & FileAttributes.ReadOnly) > 0;
                 bool isArchived = (basicInformation.FileAttributes & FileAttributes.Archive) > 0;
@@ -59,19 +58,15 @@ namespace SMBLibrary.Adapters
                 }
                 return NTStatus.STATUS_SUCCESS;
             }
-            else if (information is FileRenameInformationType2)
+            else if (information is FileRenameInformationType2 renameInformation)
             {
-                FileRenameInformationType2 renameInformation = (FileRenameInformationType2)information;
                 string newFileName = renameInformation.FileName;
-                if (!newFileName.StartsWith(@"\"))
+                if (!newFileName.StartsWith('\\'))
                 {
                     newFileName = @"\" + newFileName;
                 }
 
-                if (fileHandle.Stream != null)
-                {
-                    fileHandle.Stream.Close();
-                }
+                fileHandle.Stream?.Close();
 
                 // Note: it's possible that we just want to upcase / downcase a filename letter.
                 try
@@ -99,15 +94,12 @@ namespace SMBLibrary.Adapters
                 fileHandle.Path = newFileName;
                 return NTStatus.STATUS_SUCCESS;
             }
-            else if (information is FileDispositionInformation)
+            else if (information is FileDispositionInformation fileDispositionInformation)
             {
-                if (((FileDispositionInformation)information).DeletePending)
+                if (fileDispositionInformation.DeletePending)
                 {
                     // We're supposed to delete the file on close, but it's too late to report errors at this late stage
-                    if (fileHandle.Stream != null)
-                    {
-                        fileHandle.Stream.Close();
-                    }
+                    fileHandle.Stream?.Close();
 
                     try
                     {
@@ -130,9 +122,9 @@ namespace SMBLibrary.Adapters
                 }
                 return NTStatus.STATUS_SUCCESS;
             }
-            else if (information is FileAllocationInformation)
+            else if (information is FileAllocationInformation fileAllocationInformation)
             {
-                long allocationSize = ((FileAllocationInformation)information).AllocationSize;
+                long allocationSize = fileAllocationInformation.AllocationSize;
                 try
                 {
                     fileHandle.Stream.SetLength(allocationSize);
@@ -152,9 +144,9 @@ namespace SMBLibrary.Adapters
                 }
                 return NTStatus.STATUS_SUCCESS;
             }
-            else if (information is FileEndOfFileInformation)
+            else if (information is FileEndOfFileInformation fileEndOfFileInformation)
             {
-                long endOfFile = ((FileEndOfFileInformation)information).EndOfFile;
+                long endOfFile = fileEndOfFileInformation.EndOfFile;
                 try
                 {
                     fileHandle.Stream.SetLength(endOfFile);

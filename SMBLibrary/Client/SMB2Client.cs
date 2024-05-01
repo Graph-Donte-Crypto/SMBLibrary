@@ -37,7 +37,7 @@ namespace SMBLibrary.Client
         private int m_responseTimeoutInMilliseconds;
 
         private object m_incomingQueueLock = new object();
-        private List<SMB2Command> m_incomingQueue = new List<SMB2Command>();
+        private List<SMB2Command> m_incomingQueue = [];
         private EventWaitHandle m_incomingQueueEventHandle = new EventWaitHandle(false, EventResetMode.AutoReset);
 
         private SessionPacket m_sessionResponsePacket;
@@ -96,10 +96,7 @@ namespace SMBLibrary.Client
 
         internal bool Connect(IPAddress serverAddress, SMBTransportType transport, int port, int responseTimeoutInMilliseconds)
         {
-            if (m_serverName == null)
-            {
-                m_serverName = serverAddress.ToString();
-            }
+            m_serverName ??= serverAddress.ToString();
 
             m_transport = transport;
             if (!m_isConnected)
@@ -137,7 +134,7 @@ namespace SMBLibrary.Client
                         TrySendPacket(m_clientSocket, sessionRequest);
 
                         sessionResponsePacket = WaitForSessionResponsePacket();
-                        if (!(sessionResponsePacket is PositiveSessionResponsePacket))
+                        if (sessionResponsePacket is not PositiveSessionResponsePacket)
                         {
                             return false;
                         }

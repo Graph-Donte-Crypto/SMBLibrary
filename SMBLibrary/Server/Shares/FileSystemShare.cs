@@ -11,9 +11,10 @@ namespace SMBLibrary.Server
 {
     public class FileSystemShare : ISMBShare
     {
-        private string m_name;
-        private INTFileStore m_fileSystem;
-        private CachingPolicy m_cachingPolicy;
+        public string Name { get; private set; }
+        public INTFileStore FileStore { get; private set; }
+        public CachingPolicy CachingPolicy { get; private set; }
+        public bool IsFileSystemShare => true;
 
         public event EventHandler<AccessRequestArgs> AccessRequested;
 
@@ -23,56 +24,21 @@ namespace SMBLibrary.Server
 
         public FileSystemShare(string shareName, INTFileStore fileSystem, CachingPolicy cachingPolicy)
         {
-            m_name = shareName;
-            m_fileSystem = fileSystem;
-            m_cachingPolicy = cachingPolicy;
+            Name = shareName;
+            FileStore = fileSystem;
+            CachingPolicy = cachingPolicy;
         }
-
-        public bool HasReadAccess(SecurityContext securityContext, string path)
-        {
-            return HasAccess(securityContext, path, FileAccess.Read);
-        }
-
-        public bool HasWriteAccess(SecurityContext securityContext, string path)
-        {
-            return HasAccess(securityContext, path, FileAccess.Write);
-        }
-
         public bool HasAccess(SecurityContext securityContext, string path, FileAccess requestedAccess)
         {
             // To be thread-safe we must capture the delegate reference first
             EventHandler<AccessRequestArgs> handler = AccessRequested;
             if (handler != null)
             {
-                AccessRequestArgs args = new AccessRequestArgs(securityContext.UserName, path, requestedAccess, securityContext.MachineName, securityContext.ClientEndPoint);
-                handler(this, args);
+                AccessRequestArgs args = new(securityContext.UserName, path, requestedAccess, securityContext.MachineName, securityContext.ClientEndPoint);
+                handler.Invoke(this, args);
                 return args.Allow;
             }
             return true;
-        }
-
-        public string Name
-        {
-            get
-            {
-                return m_name;
-            }
-        }
-
-        public INTFileStore FileStore
-        {
-            get
-            {
-                return m_fileSystem;
-            }
-        }
-
-        public CachingPolicy CachingPolicy
-        {
-            get
-            {
-                return m_cachingPolicy;
-            }
         }
     }
 }

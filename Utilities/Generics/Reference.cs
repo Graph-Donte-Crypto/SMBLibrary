@@ -9,14 +9,9 @@ using System.Collections.Generic;
 
 namespace Utilities
 {
-    public class Reference<T> where T : struct
+    public class Reference<T>(T value) where T : struct
     {
-        T m_value;
-
-        public Reference(T value)
-        {
-            m_value = value;
-        }
+        T m_value = value;
 
         public T Value
         {

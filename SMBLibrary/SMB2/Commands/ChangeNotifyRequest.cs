@@ -17,7 +17,7 @@ namespace SMBLibrary.SMB2
     {
         public const int DeclaredSize = 32;
 
-        private ushort StructureSize;
+        private readonly ushort StructureSize;
         public ChangeNotifyFlags Flags;
         public uint OutputBufferLength;
         public FileID FileId;
@@ -68,12 +68,6 @@ namespace SMBLibrary.SMB2
             }
         }
 
-        public override int CommandLength
-        {
-            get
-            {
-                return DeclaredSize;
-            }
-        }
+        public override int CommandLength => DeclaredSize;
     }
 }

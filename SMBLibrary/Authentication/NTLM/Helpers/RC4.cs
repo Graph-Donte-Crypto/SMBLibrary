@@ -63,10 +63,7 @@ namespace System.Security.Cryptography
 
         private static void Swap(byte[] s, int i, int j)
         {
-            byte c = s[i];
-
-            s[i] = s[j];
-            s[j] = c;
+            (s[j], s[i]) = (s[i], s[j]);
         }
     }
 }

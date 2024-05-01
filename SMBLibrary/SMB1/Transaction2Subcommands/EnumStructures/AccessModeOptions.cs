@@ -73,7 +73,7 @@ namespace SMBLibrary.SMB1
             WriteThroughMode = (WriteThroughMode)((buffer[offset + 1] & 0x40) >> 6);
         }
 
-        public void WriteBytes(byte[] buffer, int offset)
+        public readonly void WriteBytes(byte[] buffer, int offset)
         {
             buffer[offset + 0] = (byte)((byte)AccessMode & 0x07);
             buffer[offset + 0] |= (byte)(((byte)SharingMode << 4) & 0x70);
@@ -82,7 +82,7 @@ namespace SMBLibrary.SMB1
             buffer[offset + 1] |= (byte)(((byte)WriteThroughMode << 6) & 0x40);
         }
 
-        public void WriteBytes(byte[] buffer, ref int offset)
+        public readonly void WriteBytes(byte[] buffer, ref int offset)
         {
             WriteBytes(buffer, offset);
             offset += Length;

@@ -43,16 +43,16 @@ namespace SMBLibrary.Authentication.GSSAPI
         {
             if (length >= 0x80)
             {
-                List<byte> values = new List<byte>();
+                List<byte> values = [];
                 do
                 {
                     byte value = (byte)(length % 256);
                     values.Add(value);
-                    length = length / 256;
+                    length /= 256;
                 }
                 while (length > 0);
                 values.Reverse();
-                byte[] lengthField = values.ToArray();
+                byte[] lengthField = [.. values];
                 ByteWriter.WriteByte(buffer, ref offset, (byte)(0x80 | lengthField.Length));
                 ByteWriter.WriteBytes(buffer, ref offset, lengthField);
             }
@@ -69,7 +69,7 @@ namespace SMBLibrary.Authentication.GSSAPI
                 int result = 1;
                 do
                 {
-                    length = length / 256;
+                    length /= 256;
                     result++;
                 }
                 while(length > 0);

@@ -18,26 +18,21 @@ namespace SMBLibrary.Server.SMB2
         {
             SMB2Session session = state.GetSession(request.Header.SessionID);
             string path = request.Name;
-            if (!path.StartsWith(@"\"))
+            if (!path.StartsWith('\\'))
             {
                 path = @"\" + path;
             }
 
             FileAccess createAccess = NTFileStoreHelper.ToCreateFileAccess(request.DesiredAccess, request.CreateDisposition);
-            if (share is FileSystemShare)
+            if (!share.HasAccess(session.SecurityContext, path, createAccess))
             {
-                if (!((FileSystemShare)share).HasAccess(session.SecurityContext, path, createAccess))
-                {
-                    state.LogToServer(Severity.Verbose, "Create: Opening '{0}{1}' failed. User '{2}' was denied access.", share.Name, path, session.UserName);
-                    return new ErrorResponse(request.CommandName, NTStatus.STATUS_ACCESS_DENIED);
-                }
+                state.LogToServer(Severity.Verbose, "Create: Opening '{0}{1}' failed. User '{2}' was denied access.", share.Name, path, session.UserName);
+                return new ErrorResponse(request.CommandName, NTStatus.STATUS_ACCESS_DENIED);
             }
 
-            object handle;
-            FileStatus fileStatus;
             // GetFileInformation/FileNetworkOpenInformation requires FILE_READ_ATTRIBUTES
             AccessMask desiredAccess = request.DesiredAccess | (AccessMask)FileAccessMask.FILE_READ_ATTRIBUTES;
-            NTStatus createStatus = share.FileStore.CreateFile(out handle, out fileStatus, path, desiredAccess, request.FileAttributes, request.ShareAccess, request.CreateDisposition, request.CreateOptions, session.SecurityContext);
+            NTStatus createStatus = share.FileStore.CreateFile(out object handle, out FileStatus fileStatus, path, desiredAccess, request.FileAttributes, request.ShareAccess, request.CreateDisposition, request.CreateOptions, session.SecurityContext);
             if (createStatus != NTStatus.STATUS_SUCCESS)
             {
                 state.LogToServer(Severity.Verbose, "Create: Opening '{0}{1}' failed. NTStatus: {2}.", share.Name, path, createStatus);
@@ -70,25 +65,29 @@ namespace SMBLibrary.Server.SMB2
 
         private static CreateResponse CreateResponseForNamedPipe(FileID fileID, FileStatus fileStatus)
         {
-            CreateResponse response = new CreateResponse();
-            response.CreateAction = (CreateAction)fileStatus;
-            response.FileAttributes = FileAttributes.Normal;
-            response.FileId = fileID;
+            CreateResponse response = new()
+            {
+                CreateAction = (CreateAction)fileStatus,
+                FileAttributes = FileAttributes.Normal,
+                FileId = fileID
+            };
             return response;
         }
 
         private static CreateResponse CreateResponseFromFileSystemEntry(FileNetworkOpenInformation fileInfo, FileID fileID, FileStatus fileStatus)
         {
-            CreateResponse response = new CreateResponse();
-            response.CreateAction = (CreateAction)fileStatus;
-            response.CreationTime = fileInfo.CreationTime;
-            response.LastWriteTime = fileInfo.LastWriteTime;
-            response.ChangeTime = fileInfo.LastWriteTime;
-            response.LastAccessTime = fileInfo.LastAccessTime;
-            response.AllocationSize = fileInfo.AllocationSize;
-            response.EndofFile = fileInfo.EndOfFile;
-            response.FileAttributes = fileInfo.FileAttributes;
-            response.FileId = fileID;
+            CreateResponse response = new()
+            {
+                CreateAction = (CreateAction)fileStatus,
+                CreationTime = fileInfo.CreationTime,
+                LastWriteTime = fileInfo.LastWriteTime,
+                ChangeTime = fileInfo.LastWriteTime,
+                LastAccessTime = fileInfo.LastAccessTime,
+                AllocationSize = fileInfo.AllocationSize,
+                EndofFile = fileInfo.EndOfFile,
+                FileAttributes = fileInfo.FileAttributes,
+                FileId = fileID
+            };
             return response;
         }
     }
