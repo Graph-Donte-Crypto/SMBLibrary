@@ -21,6 +21,124 @@ using Utilities;
 
 namespace SMBServer
 {
+    public class VirtualNTFileStore : INTFileStore
+    {
+        public class VirtualFile
+        {
+            public bool IsFolder { get; set; }
+            public string Path { get; set; }
+            public string Name { get; set; }
+            public byte[] Content { get; set; }
+        }
+        public Dictionary<string, VirtualFile> PathToFiles { get; set; } = [];
+        public Dictionary<Guid, VirtualFile> Handles { get; set; } = [];
+        public VirtualNTFileStore()
+        {
+            PathToFiles.Add("/", new VirtualFile
+            {
+                Content = null,
+                IsFolder = true,
+                Path = "/",
+                Name = "/"
+            });
+        }
+        public NTStatus Cancel(object ioRequest)
+        {
+            throw new NotImplementedException();
+        }
+
+        public NTStatus CloseFile(object handle)
+        {
+            throw new NotImplementedException();
+        }
+
+        public NTStatus CreateFile(out object handle, out FileStatus fileStatus, string path, AccessMask desiredAccess, SMBLibrary.FileAttributes fileAttributes, ShareAccess shareAccess, CreateDisposition createDisposition, CreateOptions createOptions, SecurityContext securityContext)
+        {
+            throw new NotImplementedException();
+        }
+
+        public NTStatus DeviceIOControl(object handle, uint ctlCode, byte[] input, out byte[] output, int maxOutputLength)
+        {
+            throw new NotImplementedException();
+        }
+
+        public NTStatus FlushFileBuffers(object handle)
+        {
+            throw new NotImplementedException();
+        }
+
+        public NTStatus GetFileInformation(out FileInformation result, object handle, FileInformationClass informationClass)
+        {
+            throw new NotImplementedException();
+        }
+
+        public NTStatus GetFileSystemInformation(out FileSystemInformation result, FileSystemInformationClass informationClass)
+        {
+            throw new NotImplementedException();
+        }
+
+        public NTStatus GetSecurityInformation(out SecurityDescriptor result, object handle, SecurityInformation securityInformation)
+        {
+            throw new NotImplementedException();
+        }
+
+        public NTStatus LockFile(object handle, long byteOffset, long length, bool exclusiveLock)
+        {
+            throw new NotImplementedException();
+        }
+
+        public NTStatus NotifyChange(out object ioRequest, object handle, NotifyChangeFilter completionFilter, bool watchTree, int outputBufferSize, OnNotifyChangeCompleted onNotifyChangeCompleted, object context)
+        {
+            throw new NotImplementedException();
+        }
+
+        public NTStatus QueryDirectory(out List<QueryDirectoryFileInformation> result, object handle, string fileName, FileInformationClass informationClass)
+        {
+            throw new NotImplementedException();
+        }
+
+        public NTStatus ReadFile(out byte[] data, object handle, long offset, int maxCount)
+        {
+            throw new NotImplementedException();
+        }
+
+        public NTStatus SetFileInformation(object handle, FileInformation information)
+        {
+            throw new NotImplementedException();
+        }
+
+        public NTStatus SetFileSystemInformation(FileSystemInformation information)
+        {
+            throw new NotImplementedException();
+        }
+
+        public NTStatus SetSecurityInformation(object handle, SecurityInformation securityInformation, SecurityDescriptor securityDescriptor)
+        {
+            throw new NotImplementedException();
+        }
+
+        public NTStatus UnlockFile(object handle, long byteOffset, long length)
+        {
+            throw new NotImplementedException();
+        }
+
+        public NTStatus WriteFile(out int numberOfBytesWritten, object handle, long offset, byte[] data)
+        {
+            throw new NotImplementedException();
+        }
+    }
+    public class VirtualShare(string name) : ISMBShare
+    {
+        public string Name { get; set; } = name;
+
+        public INTFileStore FileStore { get; set; } = new VirtualNTFileStore();
+
+        public CachingPolicy CachingPolicy => CachingPolicy.NoCaching;
+
+        public bool IsFileSystemShare => true;
+
+        public bool HasAccess(SecurityContext securityContext, string path, FileAccess requestedAccess) => true;
+    }
     public partial class ServerUI
     {
         private SMBLibrary.Server.SMBServer Server;
@@ -87,6 +205,7 @@ namespace SMBServer
                 FileSystemShare share = InitializeShare(shareSettings);
                 shares.Add(share);
             }
+            shares.Add(new VirtualShare("VirtualShare"));
 
             GSSProvider securityProvider = new(authenticationMechanism);
             Server = new SMBLibrary.Server.SMBServer(shares, securityProvider);
@@ -166,21 +285,5 @@ namespace SMBServer
             return share;
         }
 
-        public static bool Contains(List<string> list, string value)
-        {
-            return (IndexOf(list, value) >= 0);
-        }
-
-        public static int IndexOf(List<string> list, string value)
-        {
-            for (int index = 0; index < list.Count; index++)
-            {
-                if (string.Equals(list[index], value, StringComparison.OrdinalIgnoreCase))
-                {
-                    return index;
-                }
-            }
-            return -1;
-        }
     }
 }

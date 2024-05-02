@@ -47,17 +47,6 @@ namespace SMBServer
         public CheckBox chkSMB2;
     }
 
-    public class ComboBox
-    {
-        public IList DataSource { get; set; }
-        public int SelectedIndex { get; set; }
-        public object SelectedValue => DataSource[SelectedIndex];
-    }
-    public class RadioButton
-    {
-        public bool Checked { get;set; }
-    }
-
     public class CheckBox
     {
         private bool _Checked;
