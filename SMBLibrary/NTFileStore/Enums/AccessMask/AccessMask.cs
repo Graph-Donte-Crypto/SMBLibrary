@@ -21,4 +21,19 @@ namespace SMBLibrary
         GENERIC_WRITE = 0x40000000,
         GENERIC_READ = 0x80000000,
     }
+
+    public struct Access(AccessMask mask)
+    {
+        public bool DELETE = mask.HasFlag(AccessMask.DELETE);
+        public bool READ_CONTROL = mask.HasFlag(AccessMask.READ_CONTROL);
+        public bool WRITE_DAC = mask.HasFlag(AccessMask.WRITE_DAC);
+        public bool WRITE_OWNER = mask.HasFlag(AccessMask.WRITE_OWNER);
+        public bool SYNCHRONIZE = mask.HasFlag(AccessMask.SYNCHRONIZE);
+        public bool ACCESS_SYSTEM_SECURITY = mask.HasFlag(AccessMask.ACCESS_SYSTEM_SECURITY);
+        public bool MAXIMUM_ALLOWED = mask.HasFlag(AccessMask.MAXIMUM_ALLOWED);
+        public bool GENERIC_ALL = mask.HasFlag(AccessMask.GENERIC_ALL);
+        public bool GENERIC_EXECUTE = mask.HasFlag(AccessMask.GENERIC_EXECUTE);
+        public bool GENERIC_WRITE = mask.HasFlag(AccessMask.GENERIC_WRITE);
+        public bool GENERIC_READ = mask.HasFlag(AccessMask.GENERIC_READ);
+    }
 }

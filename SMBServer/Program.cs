@@ -28,6 +28,7 @@ namespace SMBServer
 
             var addresses = ServerUI.GetIPAddresses();
 
+            /*
             Console.WriteLine("Choose network interface");
             foreach (var address in addresses.Select((x, i) => (x,i)))
             {
@@ -35,8 +36,9 @@ namespace SMBServer
             }
             var str = Console.ReadLine();
             int number = int.Parse(str);
+            */
 
-            ui.Start(addresses[number].Value, SMBLibrary.SMBTransportType.NetBiosOverTCP, true);
+            ui.Start(addresses[0].Value, SMBLibrary.SMBTransportType.NetBiosOverTCP, true);
 
             Console.WriteLine("--- HEELOOO THEERE ---");
             Console.ReadLine();
